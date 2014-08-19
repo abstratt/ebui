@@ -116,7 +116,8 @@ self.app.use(bodyParser.json());
 	    self.app.get("/messages/", function(req, res) {
 		    var collection = req.db.get('messages');
 		    collection.find({},{},function(e,docs){
-         		res.json(docs);	
+                        docs = docs || [];
+ 		        res.json(docs);
 		    });
 	    });
     };
