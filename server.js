@@ -85,12 +85,10 @@ self.app.use(function(req,res,next){
 	    });
 
 	    self.app.post("/events/", function(req, res) {
-                console.log("Body: " + JSON.stringify(req.body));
-                console.log("Query: " + JSON.stringify(req.query));
-                var events = JSON.parse(req.query.mandrill_events || "[]");
+                var events = req.body.mandrill_events || [];
+                console.log(events);
                 var newMessage;
                 var event;
-                console.log(events);
                 var collection = req.db.get('messages');
                 for (var i in events) {
                     event = events[i];
