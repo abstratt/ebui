@@ -2,7 +2,10 @@
 //  OpenShift sample Node application
 var express = require('express');
 var fs      = require('fs');
+var bodyParser  = require('body-parser');
 
+var mongo = require('mongodb');
+var monk = require('monk');
 
 /**
  *  Define the sample application.
@@ -22,36 +25,13 @@ var SampleApp = function() {
      */
     self.setupVariables = function() {
         //  Set the environment variables we need.
-        self.ipaddress = process.env.OPENSHIFT_NODEJS_IP;
+        self.ipaddress = process.env.OPENSHIFT_NODEJS_IP || "127.0.0.1";
         self.port      = process.env.OPENSHIFT_NODEJS_PORT || 8080;
-
-        if (typeof self.ipaddress === "undefined") {
-            //  Log errors on OpenShift but continue w/ 127.0.0.1 - this
-            //  allows us to run/test the app locally.
-            console.warn('No OPENSHIFT_NODEJS_IP var, using 127.0.0.1');
-            self.ipaddress = "127.0.0.1";
-        };
+        self.dbhost      = process.env.OPENSHIFT_MONGODB_DB_HOST || self.ipaddress;
+        self.dbport      = process.env.OPENSHIFT_MONGODB_DB_PORT || 27017;
+        self.dbname      = process.env.OPENSHIFT_MONGODB_DB_NAME || 'mailflowjs';
     };
 
-
-    /**
-     *  Populate the cache.
-     */
-    self.populateCache = function() {
-        if (typeof self.zcache === "undefined") {
-            self.zcache = { 'index.html': '' };
-        }
-
-        //  Local cache for static content.
-        self.zcache['index.html'] = fs.readFileSync('./index.html');
-    };
-
-
-    /**
-     *  Retrieve entry (content) from cache.
-     *  @param {string} key  Key identifying content to retrieve from cache.
-     */
-    self.cache_get = function(key) { return self.zcache[key]; };
 
 
     /**
@@ -85,40 +65,60 @@ var SampleApp = function() {
     };
 
 
-    /*  ================================================================  */
-    /*  App server functions (main app logic here).                       */
-    /*  ================================================================  */
-
-    /**
-     *  Create the routing table entries + handlers for the application.
-     */
-    self.createRoutes = function() {
-        self.routes = { };
-
-        self.routes['/asciimo'] = function(req, res) {
-            var link = "http://i.imgur.com/kmbjB.png";
-            res.send("<html><body><img src='" + link + "'></body></html>");
-        };
-
-        self.routes['/'] = function(req, res) {
-            res.setHeader('Content-Type', 'text/html');
-            res.send(self.cache_get('index.html') );
-        };
-    };
-
-
     /**
      *  Initialize the server (express) and create the routes and register
      *  the handlers.
      */
     self.initializeServer = function() {
-        self.createRoutes();
-        self.app = express.createServer();
+        self.app = express();
 
-        //  Add handlers for the app (from the routes).
-        for (var r in self.routes) {
-            self.app.get(r, self.routes[r]);
-        }
+        self.db = monk(self.dbhost + ':' + self.dbport + '/'+ self.dbname);
+
+self.app.use(function(req,res,next){
+    req.db = self.db;
+    next();
+});
+self.app.use(bodyParser.urlencoded({ extended: true }));
+self.app.use(bodyParser.json());
+
+
+	    self.app.get("/", function(req, res) {
+		res.json({ message: 'hooray! welcome to our api!' });	
+	    });
+
+	    self.app.post("/events/", function(req, res) {
+                var events = req.body;
+                var newMessage;
+                var event;
+                console.log(events);
+                var collection = req.db.get('messages');
+                for (var i in events) {
+                    event = events[i];
+                    newMessage = {
+                        received: new Date(),
+                        fromEmail: event.msg.from_email,
+                        fromName: event.msg.from_name,
+                        toEmail: event.msg.email,
+                        body: event.msg.text,
+                        subject: event.msg.subject
+                   };
+                   console.log(newMessage);
+                   collection.insert(newMessage);
+                }
+		res.send(204);	
+	    });
+
+	    self.app.get("/events/", function(req, res) {
+		res.send(204);	
+	    });
+
+
+	    self.app.get("/messages/", function(req, res) {
+		    var collection = req.db.get('messages');
+		    collection.find({},{},function(e,docs){
+         		res.json(docs);	
+		    });
+	    });
     };
 
 
@@ -127,7 +127,6 @@ var SampleApp = function() {
      */
     self.initialize = function() {
         self.setupVariables();
-        self.populateCache();
         self.setupTerminationHandlers();
 
         // Create the express server and routes.
@@ -154,6 +153,9 @@ var SampleApp = function() {
  *  main():  Main code.
  */
 var zapp = new SampleApp();
+
 zapp.initialize();
 zapp.start();
+
+
 
