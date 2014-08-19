@@ -71,6 +71,8 @@ var SampleApp = function() {
      */
     self.initializeServer = function() {
         self.app = express();
+self.app.use(bodyParser.urlencoded({ extended: true }));
+self.app.use(bodyParser.json());
 
         self.db = monk(self.dbhost + ':' + self.dbport + '/'+ self.dbname);
 
@@ -83,6 +85,7 @@ self.app.use(function(req,res,next){
 	    });
 
 	    self.app.post("/events/", function(req, res) {
+                console.log("Body: " + JSON.stringify(req.body));
                 console.log("Query: " + JSON.stringify(req.query));
                 var events = JSON.parse(req.query.mandrill_events || "[]");
                 var newMessage;
