@@ -78,16 +78,13 @@ self.app.use(function(req,res,next){
     req.db = self.db;
     next();
 });
-self.app.use(bodyParser.urlencoded({ extended: true }));
-self.app.use(bodyParser.json());
-
-
 	    self.app.get("/", function(req, res) {
-		res.json({ message: 'hooray! welcome to our api!' });	
+		res.json({ messages: '//messages/' });	
 	    });
 
 	    self.app.post("/events/", function(req, res) {
-                var events = req.body;
+                console.log("Query: " + JSON.stringify(req.query));
+                var events = JSON.parse(req.query.mandrill_events || "[]");
                 var newMessage;
                 var event;
                 console.log(events);
