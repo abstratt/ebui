@@ -86,6 +86,10 @@ self.app.use(function(req,res,next){
 
 	    self.app.post("/events/", function(req, res) {
                 var events = req.body.mandrill_events || [];
+                console.log(typeof events);
+                if (typeof events === "string") {
+                    events = JSON.parse(events);
+                }
                 console.log(events);
                 var newMessage;
                 var event;
