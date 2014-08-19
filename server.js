@@ -30,8 +30,9 @@ var SampleApp = function() {
         self.dbhost = process.env.OPENSHIFT_MONGODB_DB_HOST || self.ipaddress;
         self.dbport = process.env.OPENSHIFT_MONGODB_DB_PORT || 27017;
         self.dbname = process.env.OPENSHIFT_MONGODB_DB_NAME || 'mailflowjs';
-        self.dbusername = process.env.OPENSHIFT_MONGODB_DB_USERNAME;
-        self.dbpassword = process.env.OPENSHIFT_MONGODB_DB_PASSWORD;
+        self.dbusername = process.env.OPENSHIFT_MONGODB_DB_USERNAME || '';
+        self.dbpassword = process.env.OPENSHIFT_MONGODB_DB_PASSWORD || '';
+        self.dbcreds = self.dbusername ? (self.dbusername + ':' + self.dbpassword + '@') : '';
     };
 
     /**
@@ -80,10 +81,9 @@ var SampleApp = function() {
         }));
         self.app.use(bodyParser.json());
 
-        self.db = monk(self.dbhost + ':' + self.dbport + '/' + self.dbname, {
-            username : self.dbusername,
-            password : self.dbpassword
-        });
+        var dbString = self.dbcreds + self.dbhost + ':' + self.dbport + '/' + self.dbname;
+        console.log("Connecting to: " + dbString);
+        self.db = monk(dbString);
 
         self.app.use(function(req, res, next) {
             req.db = self.db;
@@ -104,7 +104,6 @@ var SampleApp = function() {
             console.log(events);
             var newMessage;
             var event;
-            var collection = req.db.get('messages');
             for (var i in events) {
                 event = events[i];
                 newMessage = {
@@ -116,7 +115,7 @@ var SampleApp = function() {
                     subject: event.msg.subject
                 };
                 console.log(newMessage);
-                collection.insert(newMessage);
+                req.db.get('messages').insert(newMessage);
             }
             res.send(204);
         });
@@ -127,10 +126,8 @@ var SampleApp = function() {
 
 
         self.app.get("/messages/", function(req, res) {
-            var collection = req.db.get('messages');
-            collection.find({}, {}, function(e, docs) {
-                docs = docs || [];
-                res.json(docs);
+            req.db.get('messages').find({}, function(error, docs) {
+                res.json(docs || []);
             });
         });
     };
