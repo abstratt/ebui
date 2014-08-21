@@ -7,6 +7,8 @@ Each (top-level) business entity has a corresponding email inbox:
 - ticket-\<application\>@\<domain\>...
 - expense-\<application\>@\<domain\>...
 - todo-\<application\>@\<domain\>...
+- ...
+
 
 ## Instance creation
 
@@ -15,6 +17,14 @@ Whenever an email is sent to one of those entity inboxes, a new instance of that
 ## Replies to the instance creation thread
 
 For childless entities, a user can perform an update to a business entity instance by replying to the email that was sent in response to an instance creation. For entities that aggregate a single kind of child entity that has a required Memo field, responses to the creation email are considered creation of instances of child objects.
+
+## Email body contents
+
+Email body contents (the email text) map to the first Memo property in the corresponding entity. 
+
+## Email attachments
+
+Email attachments map to the first Blob property in the corresponding entity. 
 
 ## Setting properties
 
@@ -26,11 +36,7 @@ Properties can be set on creation or update using the following syntax in the bo
     Priority: High
     Assignee: Jenniffer Strong
     Fix for: v2.1.1
-    
 
-## Email body contents
-
-Email body contents (the email text) map to the first Memo property in the corresponding entity. 
 
 ## Invoking actions
 
