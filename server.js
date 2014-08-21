@@ -159,12 +159,13 @@ var SampleApp = function() {
         var commands;
         for (var l in asLines) {
             if (commands) {
-                commands.push(l);
+                // after the command section separator, everything is a command
+                commands.push(asLines[l]);
             } else {
                 if (asLines[l].indexOf('--') === 0) {
                     commands = [];
                 } else {
-                    comment += '\n' + asLines[l];
+                    comment += asLines[l] + '\n';
                 }
             }
         }	
