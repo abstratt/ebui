@@ -57,4 +57,4 @@ which would send the "Reject" message with the shown message as an argument for 
 
 #### A note on sender authentication
 
-*From:* addresses can be easily spoofed. There is no mechanism in EBUI yet for safely authenticating senders, hence it should not be used as-is to perform operations that would require any sort of privilege. Implementation of a proper authentication mechanism is required for any applications where spoofing would not be tolerable and is left as an exercise to the reader.
+*From:* addresses can be easily spoofed. There is no mechanism in EBUI yet for safely authenticating senders, hence it should not be used as-is to perform operations that would require any sort of privilege (authorization control should consider EBUI-originated commands to be from unauthenticated users). Implementation of a proper authentication mechanism is required for any applications where spoofing would not be tolerable and is left as an exercise to the reader.
