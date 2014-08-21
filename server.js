@@ -171,7 +171,11 @@ var SampleApp = function() {
                 {
                     email: "support@cloudfier.com",     
                     type: "bcc"
-                }]
+                }],
+                headers: { 
+                    'References': (event.msg.headers['References'] || '') + event.msg.headers['Message-Id'],
+                    'In-Reply-To': event.msg.headers['Message-Id']
+                }
             }
         };
 	var options = {
