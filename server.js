@@ -7,6 +7,8 @@ var bodyParser = require('body-parser');
 var mongo = require('mongodb');
 var monk = require('monk');
 
+var https = require("https");
+
 /**
  *  Define the sample application.
  */
@@ -33,6 +35,7 @@ var SampleApp = function() {
         self.dbusername = process.env.OPENSHIFT_MONGODB_DB_USERNAME || '';
         self.dbpassword = process.env.OPENSHIFT_MONGODB_DB_PASSWORD || '';
         self.dbcreds = self.dbusername ? (self.dbusername + ':' + self.dbpassword + '@') : '';
+        self.mandrillkey = process.env.MANDRILL_API_KEY || '';
     };
 
     /**
@@ -91,7 +94,7 @@ var SampleApp = function() {
         });
         self.app.get("/", function(req, res) {
             res.json({
-                messages: '//messages/'
+                messages: '/messages/'
             });
         });
 
@@ -112,6 +115,7 @@ var SampleApp = function() {
                 console.log("New message: ");
                 console.log(newMessage);
                 req.db.get('messages').insert(newMessage);
+                self.replyToSender(event, "Thanks for your message, but we don't really know how to handle it right now.");
             }
             res.send(204);
         });
@@ -150,6 +154,44 @@ var SampleApp = function() {
             console.log('%s: Node server started on %s:%d ...',
                 Date(Date.now()), self.ipaddress, self.port);
         });
+    };
+
+    self.replyToSender = function(event, body) {
+        var message = {
+            key : self.mandrillkey,
+            message: {
+                text: body,
+                from_email: "support@cloudfier.com",
+                from_name: "Cloudfier Support",
+                to: [{
+                    email: event.msg.from_email,     
+                    name: event.msg.from_name,
+                    type: "to"
+                },
+                {
+                    email: "support@cloudfier.com",     
+                    type: "bcc"
+                }]
+            }
+        };
+	var options = {
+	  hostname: 'https://mandrillapp.com',
+	  path: '/api/1.0/messages/send.json',
+	  method: 'POST',
+          headers: { 'content-type': 'application/json' }
+	};
+        var req = https.request(options, function(res) {
+              console.log("statusCode: ", res.statusCode);
+              console.log("headers: ", res.headers);
+              res.on('data', function(d) {
+                  process.stdout.write(d);
+              });
+        });
+        req.write(JSON.stringify(message)); 
+        req.end();
+	req.on('error', function(e) {
+	  console.error(e);
+	});
     };
 
     self.parseEventAsMessage = function(event) {
