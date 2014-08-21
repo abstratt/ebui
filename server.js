@@ -175,7 +175,7 @@ var SampleApp = function() {
             }
         };
 	var options = {
-	  hostname: 'https://mandrillapp.com',
+	  hostname: 'mandrillapp.com',
 	  path: '/api/1.0/messages/send.json',
 	  method: 'POST',
           headers: { 'content-type': 'application/json' }
