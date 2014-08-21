@@ -18,4 +18,4 @@ A user can perform an update to a business entity instance by replying to the em
 
 ## Note on security
 
-From: addresses can be easily spoofed. There is no mechanism in EBUI yet for safely authenticating senders, hence it should not be used as is to perform operations that would require any sort of privilege. Implementation of a proper authentication mechanism is left as an exercise to the reader.
+*From:* addresses can be easily spoofed. There is no mechanism in EBUI yet for safely authenticating senders, hence it should not be used as is to perform operations that would require any sort of privilege. Implementation of a proper authentication mechanism is left as an exercise to the reader.
