@@ -20,10 +20,13 @@ For childless entities, a user can perform an update to a business entity instan
 
 Properties can be set on creation or update using the following syntax in the body of an email:
 
+    Thanks for your report. I was able to reproduce it locally, and agree it is a 
+    dangerous bug. We will fix it right away.
     --
     Priority: High
     Assignee: Jenniffer Strong
-    Status: Accepted
+    Fix for: v2.1.1
+    
 
 ## Email body contents
 
