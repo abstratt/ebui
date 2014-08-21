@@ -96,24 +96,20 @@ var SampleApp = function() {
         });
 
         self.app.post("/events/", function(req, res) {
+            console.log("Event batch received:");
+            console.log("==========================================================");
+            console.log(req.body);
+            console.log("==========================================================");
             var events = req.body.mandrill_events || [];
-            console.log(typeof events);
             if (typeof events === "string") {
                 events = JSON.parse(events);
             }
-            console.log(events);
             var newMessage;
             var event;
             for (var i in events) {
                 event = events[i];
-                newMessage = {
-                    received: new Date(),
-                    fromEmail: event.msg.from_email,
-                    fromName: event.msg.from_name,
-                    toEmail: event.msg.email,
-                    body: event.msg.text,
-                    subject: event.msg.subject
-                };
+                newMessage = self.parseEventAsMessage(event);
+                console.log("New message: ");
                 console.log(newMessage);
                 req.db.get('messages').insert(newMessage);
             }
@@ -154,6 +150,35 @@ var SampleApp = function() {
             console.log('%s: Node server started on %s:%d ...',
                 Date(Date.now()), self.ipaddress, self.port);
         });
+    };
+
+    self.parseEventAsMessage = function(event) {
+        var text = event.msg.text;
+        var asLines = text.split("\n");
+        var comment = '';
+        var commands;
+        for (var l in asLines) {
+            if (commands) {
+                commands.push(l);
+            } else {
+                if (asLines[l].startsWith('--')) {
+                    commands = [];
+                } else {
+                    comment += '\n' + asLines[l];
+                }
+            }
+        }	
+        var newMessage = {
+            received: new Date(),
+            account: event.msg.email,
+            fromEmail: event.msg.from_email,
+            fromName: event.msg.from_name,
+            toEmail: event.msg.to,
+            subject: event.msg.subject,
+            comment: comment,
+            commands: commands
+        };
+        return newMessage;
     };
 
 }; /*  Sample Application.  */
