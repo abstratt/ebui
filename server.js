@@ -180,8 +180,9 @@ var SampleApp = function() {
             comment: comment,
             commands: commands
         };
-        // (entity)(:instanceid)?-(application)
-        var elements = /([a-zA-Z]+)(?::([^\-]+))?-([^@]+)@.*$/.exec(account);
+        // (entity)(-instanceid)?.(application)
+        //  Examples: issue.my-application@foo.bar.com and issue-43234cc221ad.my-application@foo.bar.com
+        var elements = /^([a-zA-Z]+)(?:-([^.]+))?.([^@^.]+)@.*$/.exec(account);
         if (elements !== null) {
             newMessage.entity = elements[1];
             newMessage.instanceId = elements[2];
