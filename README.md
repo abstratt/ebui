@@ -41,7 +41,8 @@ Actions can be explicitly invoked on an object by using the following syntax:
 
 which would send the "Done" message to the target object. If the action has parameters, the following syntax can be used:
 
-    Reject.
+    --
+    Rejected.
     Reason: Expenses on entertainment are not reimbursable.
 
 which would send the "Reject" message with the shown message as an argument for the 'reason' parameter. 
