@@ -165,13 +165,14 @@ var SampleApp = function() {
                 if (asLines[l].indexOf('--') === 0) {
                     commands = [];
                 } else {
-                    comment += asLines[l] + '\n';
+                    comment += asLines[l] + '\\n';
                 }
             }
-        }	
+        }
+        var account = event.msg.email;
         var newMessage = {
             received: new Date(),
-            account: event.msg.email,
+            account: account,
             fromEmail: event.msg.from_email,
             fromName: event.msg.from_name,
             toEmail: event.msg.to,
@@ -179,6 +180,13 @@ var SampleApp = function() {
             comment: comment,
             commands: commands
         };
+        // (entity)(:instanceid)?-(application)
+        var elements = /([a-zA-Z]+)(?::([^\-]+))?-([^@]+)@.*$/.exec(account);
+        if (elements !== null) {
+            newMessage.entity = elements[1];
+            newMessage.instanceId = elements[2];
+            newMessage.application = elements[3];
+        }
         return newMessage;
     };
 
