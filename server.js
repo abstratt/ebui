@@ -85,7 +85,6 @@ var SampleApp = function() {
         self.app.use(bodyParser.json());
 
         var dbString = self.dbcreds + self.dbhost + ':' + self.dbport + '/' + self.dbname;
-        console.log("Connecting to: " + dbString);
         self.db = monk(dbString);
 
         self.app.use(function(req, res, next) {
@@ -160,9 +159,10 @@ var SampleApp = function() {
         var message = {
             key : self.mandrillkey,
             message: {
-                text: body,
+                text: "This is an automated response to your message to "+ event.msg.email + "\n\n" + body,
                 from_email: "support@cloudfier.com",
                 from_name: "Cloudfier Support",
+                subject: (event.msg.subject && event.msg.subject.indexOf("Re:") === -1) ? ("Re: "+ event.msg.subject) : event.msg.subject,
                 to: [{
                     email: event.msg.from_email,     
                     name: event.msg.from_name,
