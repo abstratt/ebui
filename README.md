@@ -4,9 +4,9 @@
 
 Each (top-level) business entity has a corresponding email inbox:
 
-- ticket-<application>@<domain>
-- expense-<application>@<domain>
-- todo-<application>@<domain>
+- ticket-<application>@<domain>...
+- expense-<application>@<domain>...
+- todo-<application>@<domain>...
 
 ## Instance creation
 
