@@ -161,7 +161,7 @@ var SampleApp = function() {
             if (commands) {
                 commands.push(l);
             } else {
-                if (asLines[l].startsWith('--')) {
+                if (asLines[l].indexOf('--') === 0) {
                     commands = [];
                 } else {
                     comment += '\n' + asLines[l];
