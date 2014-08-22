@@ -153,6 +153,11 @@ var SampleApp = function() {
             console.log('%s: Node server started on %s:%d ...',
                 Date(Date.now()), self.ipaddress, self.port);
         });
+        
+        var interval;
+        interval = setInterval(function() {
+            self.processPendingMessages();
+        }, 10000);
     };
 
     self.replyToSender = function(event, body) {
@@ -237,6 +242,17 @@ var SampleApp = function() {
         return newMessage;
     };
 
+    self.processPendingMessages = function () {
+        console.log('Processing pending messages');
+        self.db.get('messages').findAndModify({ 
+            $or: [ 
+                { status: { $exists: false } }, 
+                { status: 'Pending' } 
+            ] 
+        },{ $set: { status: 'Skipped' } });
+        console.log('Done');
+    };
+
 }; /*  Sample Application.  */
 
 
@@ -248,3 +264,4 @@ var zapp = new SampleApp();
 
 zapp.initialize();
 zapp.start();
+
