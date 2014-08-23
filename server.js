@@ -259,7 +259,7 @@ var EBUIApp = function() {
         console.log("Processing...");
         console.log(message);
         message.status = 'Processed';
-        self.db.get('messages').updatebyId(message._id, { status: 'Processed'});
+        self.db.get('messages').updateById(message._id, { status: 'Processed'});
     };
 
 };
