@@ -1,5 +1,5 @@
 #!/bin/env node
- //  OpenShift sample Node application
+
 var express = require('express');
 var fs = require('fs');
 var bodyParser = require('body-parser');
@@ -9,10 +9,7 @@ var monk = require('monk');
 
 var https = require("https");
 
-/**
- *  Define the sample application.
- */
-var SampleApp = function() {
+var EBUIApp = function() {
 
     //  Scope.
     var self = this;
@@ -36,6 +33,10 @@ var SampleApp = function() {
         self.dbpassword = process.env.OPENSHIFT_MONGODB_DB_PASSWORD || '';
         self.dbcreds = self.dbusername ? (self.dbusername + ':' + self.dbpassword + '@') : '';
         self.mandrillkey = process.env.MANDRILL_API_KEY || '';
+        self.fromEmail = process.env.FROM_EMAIL;
+        self.fromName = process.env.FROM_NAME;
+        if (!self.fromEmail) throw new Error("No email address set");
+        if (!self.fromName) throw new Error("No email name set");
     };
 
     /**
@@ -45,7 +46,7 @@ var SampleApp = function() {
      */
     self.terminator = function(sig) {
         if (typeof sig === "string") {
-            console.log('%s: Received %s - terminating sample app ...',
+            console.log('%s: Received %s - terminating the app ...',
                 Date(Date.now()), sig);
             process.exit(1);
         }
@@ -106,16 +107,13 @@ var SampleApp = function() {
             if (typeof events === "string") {
                 events = JSON.parse(events);
             }
-            var newMessage;
-            var event;
-            for (var i in events) {
-                event = events[i];
-                newMessage = self.parseEventAsMessage(event);
+            events.forEach(function (event) {
+                var newMessage = self.parseEventAsMessage(event);
                 console.log("New message: ");
                 console.log(newMessage);
                 req.db.get('messages').insert(newMessage);
                 self.replyToSender(event, "Thanks for your message, but we don't really know how to handle it right now.");
-            }
+            });
             res.send(204);
         });
 
@@ -133,7 +131,7 @@ var SampleApp = function() {
 
 
     /**
-     *  Initializes the sample application.
+     *  Initializes the application.
      */
     self.initialize = function() {
         self.setupVariables();
@@ -145,7 +143,7 @@ var SampleApp = function() {
 
 
     /**
-     *  Start the server (starts up the sample application).
+     *  Start the server (starts up the application).
      */
     self.start = function() {
         //  Start the app on the specific interface (and port).
@@ -165,8 +163,8 @@ var SampleApp = function() {
             key : self.mandrillkey,
             message: {
                 text: "This is an automated response to your message to "+ event.msg.email + "\n\n" + body,
-                from_email: "support@cloudfier.com",
-                from_name: "Cloudfier Support",
+                from_email: self.fromEmail,
+                from_name: self.fromName,
                 subject: (event.msg.subject && event.msg.subject.indexOf("Re:") === -1) ? ("Re: "+ event.msg.subject) : event.msg.subject,
                 to: [{
                     email: event.msg.from_email,     
@@ -174,7 +172,7 @@ var SampleApp = function() {
                     type: "to"
                 },
                 {
-                    email: "support@cloudfier.com",     
+                    email: self.fromEmail,     
                     type: "bcc"
                 }],
                 headers: { 
@@ -205,21 +203,20 @@ var SampleApp = function() {
 
     self.parseEventAsMessage = function(event) {
         var text = event.msg.text;
-        var asLines = text.split("\n");
         var comment = '';
         var commands;
-        for (var l in asLines) {
+        text.split("\n").forEach(function (current) {        
             if (commands) {
                 // after the command section separator, everything is a command
-                commands.push(asLines[l]);
+                commands.push(current);
             } else {
-                if (asLines[l].indexOf('--') === 0) {
+                if (current.indexOf('--') === 0) {
                     commands = [];
                 } else {
-                    comment += asLines[l] + '\\n';
+                    comment += current + '\\n';
                 }
             }
-        }
+        });
         var account = event.msg.email;
         var newMessage = {
             received: new Date(),
@@ -229,9 +226,10 @@ var SampleApp = function() {
             toEmail: event.msg.to,
             subject: event.msg.subject,
             comment: comment,
-            commands: commands
+            commands: commands,
+            status: 'Pending'
         };
-        // (entity)(-instanceid)?.(application)
+        // (entity)(-instanceid)?.(application)@<domain>
         //  Examples: issue.my-application@foo.bar.com and issue-43234cc221ad.my-application@foo.bar.com
         var elements = /^([a-zA-Z]+)(?:-([^.]+))?.([^@^.]+)@.*$/.exec(account);
         if (elements !== null) {
@@ -244,24 +242,33 @@ var SampleApp = function() {
 
     self.processPendingMessages = function () {
         console.log('Processing pending messages');
-        self.db.get('messages').findAndModify({ 
+        self.db.get('messages').find({ 
             $or: [ 
                 { status: { $exists: false } }, 
                 { status: 'Pending' } 
             ] 
-        },{ $set: { status: 'Skipped' } });
+        }).each(function (message) {
+            self.processPendingMessage(message);
+        });
         console.log('Done');
     };
 
-}; /*  Sample Application.  */
+    self.processPendingMessage = function (message) {
+        console.log("Processing...");
+        console.log(message);
+        message.status = 'Processed';
+        self.db.get('messages').updatebyId(message._id, { status: 'Processed'});
+    };
+
+};
 
 
 
 /**
  *  main():  Main code.
  */
-var zapp = new SampleApp();
+var ebuiApp = new EBUIApp();
 
-zapp.initialize();
-zapp.start();
+ebuiApp.initialize();
+ebuiApp.start();
 
