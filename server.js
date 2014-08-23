@@ -33,10 +33,12 @@ var EBUIApp = function() {
         self.dbpassword = process.env.OPENSHIFT_MONGODB_DB_PASSWORD || '';
         self.dbcreds = self.dbusername ? (self.dbusername + ':' + self.dbpassword + '@') : '';
         self.mandrillkey = process.env.MANDRILL_API_KEY || '';
-        self.fromEmail = process.env.FROM_EMAIL;
-        self.fromName = process.env.FROM_NAME;
-        if (!self.fromEmail) throw new Error("No email address set");
-        if (!self.fromName) throw new Error("No email name set");
+        self.fromEmail = process.env.FROM_EMAIL || '';  
+        self.fromName = process.env.FROM_NAME || '';
+        console.log("fromEmail: \"" + self.fromEmail + '"');
+        console.log("fromName: \"" + self.fromName + '"');
+        if (self.fromEmail === '') throw new Error("No email address set");
+        if (self.fromName === '') throw new Error("No email name set");
     };
 
     /**
