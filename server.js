@@ -172,13 +172,9 @@ var EBUIApp = function() {
                     email: event.msg.from_email,     
                     name: event.msg.from_name,
                     type: "to"
-                },
-                {
-                    email: self.fromEmail,     
-                    type: "bcc"
                 }],
                 headers: { 
-                    'References': (event.msg.headers['References'] || '') + event.msg.headers['Message-Id'],
+                    //'References': (event.msg.headers['References'] || '') + event.msg.headers['Message-Id'],
                     'In-Reply-To': event.msg.headers['Message-Id']
                 }
             }
@@ -229,11 +225,13 @@ var EBUIApp = function() {
             subject: event.msg.subject,
             comment: comment,
             commands: commands,
-            status: 'Pending'
+            status: 'Pending',
+            // so we can reply in context later
+            _contextMessageId: event.headers['Message-Id']
         };
         // (entity)(-instanceid)?.(application)@<domain>
         //  Examples: issue.my-application@foo.bar.com and issue-43234cc221ad.my-application@foo.bar.com
-        var elements = /^([a-zA-Z]+)(?:-([^.]+))?.([^@^.]+)@.*$/.exec(account);
+        var elements = /^([a-zA-Z]+)(?:-([^.]+))?\.([^@^.]+)@.*$/.exec(account);
         if (elements !== null) {
             newMessage.entity = elements[1];
             newMessage.instanceId = elements[2];
@@ -257,8 +255,12 @@ var EBUIApp = function() {
 
     self.processPendingMessage = function (message) {
         console.log("Processing...");
-        console.log(message);
-        message.status = 'Processed';
+        
+        if (!message.application) {
+            message.status = 'Invalid';
+        } else {
+            message.status = 'Processing';
+        }
         self.db.get('messages').updateById(message._id, message);
     };
 
