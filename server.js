@@ -227,7 +227,7 @@ var EBUIApp = function() {
             commands: commands,
             status: 'Pending',
             // so we can reply in context later
-            _contextMessageId: event.headers['Message-Id']
+            _contextMessageId: event.msg.headers['Message-Id']
         };
         // (entity)(-instanceid)?.(application)@<domain>
         //  Examples: issue.my-application@foo.bar.com and issue-43234cc221ad.my-application@foo.bar.com
