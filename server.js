@@ -280,7 +280,7 @@ var EBUIApp = function() {
         var parsedKirraBaseUrl = url.parse(self.kirraBaseUrl);	        
 	var options = {
 	  hostname: parsedKirraBaseUrl.hostname,
-	  path: parsedKirraBaseUrl.hostname + application + path,
+	  path: parsedKirraBaseUrl.pathname + application + path,
 	  method: method || 'GET',
           headers: { 'content-type': 'application/json' }
 	};
