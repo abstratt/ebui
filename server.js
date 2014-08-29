@@ -238,9 +238,9 @@ var EBUIApp = function() {
         };
         // (entity)(-instanceid)?.(application)@<domain>
         //  Examples: issue.my-application@foo.bar.com and issue-43234cc221ad.my-application@foo.bar.com
-        var elements = /^([a-zA-Z]+)(?:-([^.]+))?\.([^@^.]+)@.*$/.exec(account);
+        var elements = /^([a-z_A-Z]+)(?:-([^.]+))?\.([^@^.]+)@.*$/.exec(account);
         if (elements !== null) {
-            newMessage.entity = elements[1];
+            newMessage.entity = elements[1].replace("_", ".");
             newMessage.instanceId = elements[2];
             newMessage.application = elements[3];
         }
