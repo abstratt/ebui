@@ -13,6 +13,7 @@ var http = require("http");
 var url = require("url");
 
 var yaml = require("js-yaml");
+var merge = require("merge");
 
 var EBUIApp = function() {
 
@@ -123,7 +124,6 @@ var EBUIApp = function() {
                 console.log("New message: ");
                 console.log(newMessage);
                 self.saveMessage(newMessage);
-                self.replyToSender(event, "Thanks for your message, but we don't really know how to handle it right now.");
             });
             res.send(204);
         });
@@ -169,22 +169,21 @@ var EBUIApp = function() {
         }, 10000);
     };
 
-    self.replyToSender = function(event, body) {
-        var message = {
+    self.replyToSender = function(message, body) {
+        var payload = {
             key : self.mandrillkey,
             message: {
                 text: "This is an automated response to your message to "+ event.msg.email + "\n\n" + body,
                 from_email: self.fromEmail,
                 from_name: self.fromName,
-                subject: (event.msg.subject && event.msg.subject.indexOf("Re:") === -1) ? ("Re: "+ event.msg.subject) : event.msg.subject,
+                subject: (message.subject && message.subject.indexOf("Re:") === -1) ? ("Re: "+ message.subject) : event.msg.subject,
                 to: [{
-                    email: event.msg.from_email,     
-                    name: event.msg.from_name,
+                    email: message.fromEmail,     
+                    name: message.fromName,
                     type: "to"
                 }],
                 headers: { 
-                    //'References': (event.msg.headers['References'] || '') + event.msg.headers['Message-Id'],
-                    'In-Reply-To': event.msg.headers['Message-Id']
+                    'In-Reply-To': message._contextMessageId
                 }
             }
         };
@@ -201,7 +200,7 @@ var EBUIApp = function() {
                   process.stdout.write(d);
               });
         });
-        req.write(JSON.stringify(message)); 
+        req.write(JSON.stringify(payload)); 
         req.end();
 	req.on('error', function(e) {
 	  console.error(e);
@@ -268,6 +267,7 @@ var EBUIApp = function() {
 
         if (!message.application) {
             message.status = 'Invalid';
+            self.replyToSender(newMessage, "Unfortunately, your message could not be processed.");
         } else {
             if (message.instanceId) {
                 self.updateInstance(message);
@@ -312,8 +312,12 @@ var EBUIApp = function() {
 
     self.createInstance = function(message) {
         var callbacks = {
-            onData: function (d) { },
-            onError: function (e) { }
+            onData: function (d) {
+                self.replyToSender(newMessage, "Message successfully processed."); 
+            },
+            onError: function (e) {
+                self.replyToSender(newMessage, "Error processing your message, object not created. Reason: " + e); 
+            }
         };
         self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', { values: message.values });
     },
