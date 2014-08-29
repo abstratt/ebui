@@ -9,9 +9,10 @@ var monk = require('monk');
 
 var https = require("https");
 
+var url = require("url");
+
 var EBUIApp = function() {
 
-    //  Scope.
     var self = this;
 
 
@@ -35,6 +36,11 @@ var EBUIApp = function() {
         self.mandrillkey = process.env.MANDRILL_API_KEY || '';
         self.fromEmail = process.env.FROM_EMAIL || '';  
         self.fromName = process.env.FROM_NAME || '';
+        self.baseUrl = process.env.BASE_URL || ("http://" + self.ipaddress + "/";
+        self.kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
+
+        console.log("base url: \"" + self.baseUrl + '"');
+        console.log("Kirra API url: \"" + self.kirraBaseUrl + '"');
         console.log("fromEmail: \"" + self.fromEmail + '"');
         console.log("fromName: \"" + self.fromName + '"');
         if (self.fromEmail === '') throw new Error("No email address set");
@@ -96,7 +102,7 @@ var EBUIApp = function() {
         });
         self.app.get("/", function(req, res) {
             res.json({
-                messages: '/messages/'
+                messages: self.resolveUrl('messages')
             });
         });
 
@@ -113,7 +119,7 @@ var EBUIApp = function() {
                 var newMessage = self.parseEventAsMessage(event);
                 console.log("New message: ");
                 console.log(newMessage);
-                req.db.get('messages').insert(newMessage);
+                self.saveMessage(newMessage);
                 self.replyToSender(event, "Thanks for your message, but we don't really know how to handle it right now.");
             });
             res.send(204);
@@ -202,14 +208,14 @@ var EBUIApp = function() {
     self.parseEventAsMessage = function(event) {
         var text = event.msg.text;
         var comment = '';
-        var commands;
+        var values;
         text.split("\n").forEach(function (current) {        
-            if (commands) {
+            if (values) {
                 // after the command section separator, everything is a command
-                commands.push(current);
+                values.push(current);
             } else {
                 if (current.indexOf('--') === 0) {
-                    commands = [];
+                    values = [];
                 } else {
                     comment += current + '\\n';
                 }
@@ -224,7 +230,7 @@ var EBUIApp = function() {
             toEmail: event.msg.to,
             subject: event.msg.subject,
             comment: comment,
-            commands: commands,
+            values: values ? JSON.parse('{'+ values.join(',') + '}') : undefined,
             status: 'Pending',
             // so we can reply in context later
             _contextMessageId: event.msg.headers['Message-Id']
@@ -255,24 +261,77 @@ var EBUIApp = function() {
 
     self.processPendingMessage = function (message) {
         console.log("Processing...");
-        
+
         if (!message.application) {
             message.status = 'Invalid';
         } else {
-            message.status = 'Processing';
+            if (message.instanceId) {
+                self.updateInstance(message);
+                message.status = 'Processing update on ' + message.instanceId + "@" + message.entity + "/"+ message.application;
+            } else {
+                self.createInstance(message);
+                message.status = 'Processing creation of ' + message.entity + "/"+ message.application;
+            }
         }
-        self.db.get('messages').updateById(message._id, message);
+        self.saveMessage(message);    
     };
 
+    self.performKirraRequest = function(callbacks, application, path, method, body) {
+        var parsedKirraBaseUrl = url.parse(self.kirraBaseUrl);	        
+	var options = {
+	  hostname: parsedKirraBaseUrl.hostname,
+	  path: parsedKirraBaseUrl.hostname + application + path,
+	  method: method || 'GET',
+          headers: { 'content-type': 'application/json' }
+	};
+        var successCallback = (typeof callbacks === 'function') ? callbacks : callbacks.onData;
+        var defaultError = function (e) { console.error(e); }; 
+        var errorCallback = (typeof callbacks === 'object') ? callbacks.onError : undefined;
+        var req = https.request(options, function(res) {
+              console.log("statusCode: ", res.statusCode);
+              console.log("headers: ", res.headers);
+              res.on('data', function(d) {
+                  process.stdout.write(d);
+                  successCallback(d);
+              });
+        });
+        if (body) {
+            req.write(JSON.stringify(body)); 
+        }
+        req.end();
+	req.on('error', function(e) {
+	  console.error(e);
+          errorCallback && errorCallback(e); 
+	});
+    },
+
+    self.createInstance = function(message) {
+        var callbacks = {
+            onSuccess: function (d) { },
+            onError: function (e) { }
+        };
+        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', { values: message.values });
+    },
+
+    self.updateInstance = function(message) {
+    },
+
+    self.saveMessage = function(message) {
+        var messages = self.db.get('messages');
+        if (message._id) {
+            messages.updateById(message._id, message);
+        } else {
+            messages.insert(message);
+        }
+    };
+
+    self.resolveUrl = function(relative) {
+        return self.baseUrl + relative;
+    };
 };
 
 
-
-/**
- *  main():  Main code.
- */
 var ebuiApp = new EBUIApp();
-
 ebuiApp.initialize();
 ebuiApp.start();
 
