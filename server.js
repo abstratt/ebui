@@ -36,7 +36,7 @@ var EBUIApp = function() {
         self.mandrillkey = process.env.MANDRILL_API_KEY || '';
         self.fromEmail = process.env.FROM_EMAIL || '';  
         self.fromName = process.env.FROM_NAME || '';
-        self.baseUrl = process.env.BASE_URL || ("http://" + self.ipaddress + "/";
+        self.baseUrl = process.env.BASE_URL || ("http://" + self.ipaddress + "/");
         self.kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
 
         console.log("base url: \"" + self.baseUrl + '"');
