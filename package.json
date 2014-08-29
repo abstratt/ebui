@@ -28,7 +28,8 @@
     "express": "~3.4.4",
     "body-parser": "1.6.5",
     "mongodb": "*",
-    "monk": "*"
+    "monk": "*",
+    "js-yaml": "*"
   },
   "devDependencies": {},
   "bundleDependencies": [],
