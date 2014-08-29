@@ -309,7 +309,7 @@ var EBUIApp = function() {
 
     self.createInstance = function(message) {
         var callbacks = {
-            onSuccess: function (d) { },
+            onData: function (d) { },
             onError: function (e) { }
         };
         self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', { values: message.values });
