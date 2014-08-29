@@ -102,7 +102,7 @@ var EBUIApp = function() {
         });
         self.app.get("/", function(req, res) {
             res.json({
-                messages: self.resolveUrl('messages')
+                messages: self.resolveUrl('messages/')
             });
         });
 
@@ -284,6 +284,7 @@ var EBUIApp = function() {
 	  method: method || 'GET',
           headers: { 'content-type': 'application/json' }
 	};
+        console.log("Kirra request: " + JSON.stringify(options));
         var successCallback = (typeof callbacks === 'function') ? callbacks : callbacks.onData;
         var defaultError = function (e) { console.error(e); }; 
         var errorCallback = (typeof callbacks === 'object') ? callbacks.onError : undefined;
