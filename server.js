@@ -12,6 +12,8 @@ var http = require("http");
 
 var url = require("url");
 
+var yaml = require("js-yaml");
+
 var EBUIApp = function() {
 
     var self = this;
@@ -209,19 +211,20 @@ var EBUIApp = function() {
     self.parseEventAsMessage = function(event) {
         var text = event.msg.text;
         var comment = '';
-        var values;
+        var processingRules;
         text.split("\n").forEach(function (current) {        
-            if (values) {
+            if (processingRules) {
                 // after the command section separator, everything is a command
-                values.push(current);
+                processingRules.push(current);
             } else {
                 if (current.indexOf('--') === 0) {
-                    values = [];
+                    processingRules = [];
                 } else {
                     comment += current + '\\n';
                 }
             }
         });
+        var values = processingRules ? yaml.safeLoad(processingRules.join('\\n')) : undefined;
         var account = event.msg.email;
         var newMessage = {
             received: new Date(),
@@ -231,7 +234,7 @@ var EBUIApp = function() {
             toEmail: event.msg.to,
             subject: event.msg.subject,
             comment: comment,
-            values: values ? JSON.parse('{'+ values.join(',') + '}') : undefined,
+            values: values,
             status: 'Pending',
             // so we can reply in context later
             _contextMessageId: event.msg.headers['Message-Id']
