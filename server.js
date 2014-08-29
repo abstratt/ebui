@@ -8,6 +8,7 @@ var mongo = require('mongodb');
 var monk = require('monk');
 
 var https = require("https");
+var http = require("http");
 
 var url = require("url");
 
@@ -288,7 +289,7 @@ var EBUIApp = function() {
         var successCallback = (typeof callbacks === 'function') ? callbacks : callbacks.onData;
         var defaultError = function (e) { console.error(e); }; 
         var errorCallback = (typeof callbacks === 'object') ? callbacks.onError : undefined;
-        var req = https.request(options, function(res) {
+        var req = http.request(options, function(res) {
               console.log("statusCode: ", res.statusCode);
               console.log("headers: ", res.headers);
               res.on('data', function(d) {
