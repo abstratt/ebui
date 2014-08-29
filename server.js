@@ -173,10 +173,10 @@ var EBUIApp = function() {
         var payload = {
             key : self.mandrillkey,
             message: {
-                text: "This is an automated response to your message to "+ event.msg.email + "\n\n" + body,
+                text: "This is an automated response to your message to "+ message.account + "\n\n" + body,
                 from_email: self.fromEmail,
                 from_name: self.fromName,
-                subject: (message.subject && message.subject.indexOf("Re:") === -1) ? ("Re: "+ message.subject) : event.msg.subject,
+                subject: (message.subject && message.subject.indexOf("Re:") === -1) ? ("Re: "+ message.subject) : message.subject,
                 to: [{
                     email: message.fromEmail,     
                     name: message.fromName,
