@@ -169,12 +169,12 @@ var EBUIApp = function() {
         }, 10000);
     };
 
-    self.replyToSender = function(message, body) {
+    self.replyToSender = function(message, body, senderEmail) {
         var payload = {
             key : self.mandrillkey,
             message: {
                 text: "This is an automated response to your message to "+ message.account + "\n\n" + body,
-                from_email: self.fromEmail,
+                from_email: senderEmail || self.fromEmail,
                 from_name: self.fromName,
                 subject: (message.subject && message.subject.indexOf("Re:") === -1) ? ("Re: "+ message.subject) : message.subject,
                 to: [{
@@ -307,7 +307,7 @@ var EBUIApp = function() {
 	  console.error(e);
           errorCallback && errorCallback(e); 
 	});
-    },
+    };
 
     self.onError = function(message, errorMessage) {
 	    return function (e) {
@@ -316,31 +316,35 @@ var EBUIApp = function() {
 		self.saveMessage(message);
 		self.replyToSender(message, errorMessage + " Reason: " + e); 
 	    };
-    },  
+    };  
+
+    self.makeEmailForInstance = function(message) {
+        return message.entity.replace('.', '_') + '-' + message.instanceId + '-' + message.application + '@inbox.cloudfier.com';
+    };
 
     self.createInstance = function(message) {
         var callbacks = {
             onData: function (d) {
-                self.replyToSender(message, "Message successfully processed. Object was created.");
+                self.replyToSender(message, "Message successfully processed. Object was created.", self.makeEmailForInstance(message));
                 message.status = "Processed";
                 self.saveMessage(message);
             },
             onError: self.onError(message, "Error processing your message, object not created.")
         };
         self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', { values: message.values });
-    },
+    };
 
     self.updateInstance = function(message) {
         var callbacks = {
             onData: function (d) {
-                self.replyToSender(message, "Message successfully processed. Object was updated.");
+                self.replyToSender(message, "Message successfully processed. Object was updated.", self.makeEmailForInstance(message));
                 message.status = "Processed";
                 self.saveMessage(message);
             },
             onError: self.onError(message, "Error processing your message, object not updated.")
         };
         self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', { values: message.values });
-    },
+    };
 
     self.saveMessage = function(message) {
         var messages = self.db.get('messages');
