@@ -211,11 +211,16 @@ var EBUIApp = function() {
         var text = event.msg.text;
         var comment = '';
         var processingRules;
+        var ignoring = false;
         if (text) {
 		text.split("\n").forEach(function (current) {        
 		    if (processingRules) {
-		        // after the command section separator, everything is a command
-		        processingRules.push(current);
+                        if (current.indexOf('--') === 0) {
+                            ignoring = true;
+                        else if (!ignoring) {
+			    // after the command section separator, everything is a command
+			    processingRules.push(current);
+                        }
 		    } else {
 		        if (current.indexOf('--') === 0) {
 		            processingRules = [];
@@ -354,9 +359,9 @@ var EBUIApp = function() {
 	self.onError(message, "Error retrieving the object for your message."));
     };
 
-    self.getInstance = function(message, callback, onError) {
+    self.getInstance = function(message, onData, onError) {
         var callbacks = {
-            onData: callback,
+            onData: onData,
             onError: onError
         };
         self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId);
