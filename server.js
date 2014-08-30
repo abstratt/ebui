@@ -211,18 +211,20 @@ var EBUIApp = function() {
         var text = event.msg.text;
         var comment = '';
         var processingRules;
-        text.split("\n").forEach(function (current) {        
-            if (processingRules) {
-                // after the command section separator, everything is a command
-                processingRules.push(current);
-            } else {
-                if (current.indexOf('--') === 0) {
-                    processingRules = [];
-                } else {
-                    comment += current + '\\n';
-                }
-            }
-        });
+        if (text) {
+		text.split("\n").forEach(function (current) {        
+		    if (processingRules) {
+		        // after the command section separator, everything is a command
+		        processingRules.push(current);
+		    } else {
+		        if (current.indexOf('--') === 0) {
+		            processingRules = [];
+		        } else {
+		            comment += current + '\\n';
+		        }
+		    }
+		});
+        }
         var values = processingRules ? yaml.safeLoad(processingRules.join('\\n')) : undefined;
         var account = event.msg.email;
         var newMessage = {
