@@ -325,10 +325,10 @@ var EBUIApp = function() {
     self.createInstance = function(message) {
         var callbacks = {
             onData: function (d) {
-                self.replyToSender(message, "Message successfully processed. Object was created.", self.makeEmailForInstance(message));
                 message.instanceId = d.objectId;	
                 message.status = "Processed";
                 self.saveMessage(message);
+                self.replyToSender(message, "Message successfully processed. Object was created.", self.makeEmailForInstance(message));
             },
             onError: self.onError(message, "Error processing your message, object not created.")
         };
