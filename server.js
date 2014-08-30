@@ -296,7 +296,7 @@ var EBUIApp = function() {
               console.log("headers: ", res.headers);
               res.on('data', function(d) {
                   process.stdout.write(d);
-                  successCallback(d);
+                  successCallback(JSON.parse(d));
               });
         });
         if (body) {
