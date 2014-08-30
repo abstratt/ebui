@@ -309,6 +309,15 @@ var EBUIApp = function() {
 	});
     },
 
+    self.onError = function(message, errorMessage) {
+	    return function (e) {
+		message.status = "Failure";
+		message.error = e;
+		self.saveMessage(message);
+		self.replyToSender(message, errorMessage + " Reason: " + e); 
+	    };
+    },  
+
     self.createInstance = function(message) {
         var callbacks = {
             onData: function (d) {
@@ -316,14 +325,21 @@ var EBUIApp = function() {
                 message.status = "Processed";
                 self.saveMessage(message);
             },
-            onError: function (e) {
-                message.status = "Failure";
-                message.error = e;
-                self.saveMessage(message);
-                self.replyToSender(message, "Error processing your message, object not created. Reason: " + e); 
-            }
+            onError: self.onError(message, "Error processing your message, object not created. Reason: " + e)
         };
         self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', { values: message.values });
+    },
+
+    self.updateInstance = function(message) {
+        var callbacks = {
+            onData: function (d) {
+                self.replyToSender(message, "Message successfully processed. Object was updated.");
+                message.status = "Processed";
+                self.saveMessage(message);
+            },
+            onError: self.onError(message, "Error processing your message, object not updated. Reason: " + e)
+        };
+        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', { values: message.values });
     },
 
     self.saveMessage = function(message) {
