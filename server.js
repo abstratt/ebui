@@ -187,12 +187,12 @@ var EBUIApp = function() {
                 }
             }
         };
-	var options = {
-	  hostname: 'mandrillapp.com',
-	  path: '/api/1.0/messages/send.json',
-	  method: 'POST',
-          headers: { 'content-type': 'application/json' }
-	};
+	    var options = {
+	      hostname: 'mandrillapp.com',
+	      path: '/api/1.0/messages/send.json',
+	      method: 'POST',
+              headers: { 'content-type': 'application/json' }
+	    };
         var req = https.request(options, function(res) {
               console.log("statusCode: ", res.statusCode);
               console.log("headers: ", res.headers);
@@ -202,9 +202,9 @@ var EBUIApp = function() {
         });
         req.write(JSON.stringify(payload)); 
         req.end();
-	req.on('error', function(e) {
-	  console.error(e);
-	});
+	    req.on('error', function(e) {
+	      console.error(e);
+	    });
     };
 
     self.parseEventAsMessage = function(event) {
@@ -213,22 +213,22 @@ var EBUIApp = function() {
         var processingRules;
         var ignoring = false;
         if (text) {
-		text.split("\n").forEach(function (current) {        
-		    if (processingRules) {
-                        if (current.indexOf('--') === 0) {
-                            ignoring = true;
-                        } else if (!ignoring) {
-			    // after the command section separator, everything is a command
-			    processingRules.push(current);
-                        }
-		    } else {
-		        if (current.indexOf('--') === 0) {
-		            processingRules = [];
+		    text.split("\n").forEach(function (current) {        
+		        if (processingRules) {
+                    if (current.indexOf('--') === 0) {
+                        ignoring = true;
+                    } else if (!ignoring) {
+	                    // after the command section separator, everything is a command
+	                    processingRules.push(current);
+                    }
 		        } else {
-		            comment += current + '\\n';
+		            if (current.indexOf('--') === 0) {
+		                processingRules = [];
+		            } else {
+		                comment += current + '\\n';
+		            }
 		        }
-		    }
-		});
+		    });
         }
         var values = processingRules ? yaml.safeLoad(processingRules.join('\\n')) : undefined;
         var account = event.msg.email;
@@ -288,41 +288,41 @@ var EBUIApp = function() {
 
     self.performKirraRequest = function(callbacks, application, path, method, body) {
         var parsedKirraBaseUrl = url.parse(self.kirraBaseUrl);	        
-	var options = {
-	  hostname: parsedKirraBaseUrl.hostname,
-	  path: parsedKirraBaseUrl.pathname + application + path,
-	  method: method || 'GET',
-          headers: { 'content-type': 'application/json' }
-	};
+	    var options = {
+	      hostname: parsedKirraBaseUrl.hostname,
+	      path: parsedKirraBaseUrl.pathname + application + path,
+	      method: method || 'GET',
+              headers: { 'content-type': 'application/json' }
+	    };
         console.log("Kirra request: " + JSON.stringify(options));
         var successCallback = (typeof callbacks === 'function') ? callbacks : callbacks.onData;
         var defaultError = function (e) { console.error(e); }; 
         var errorCallback = (typeof callbacks === 'object') ? callbacks.onError : undefined;
         var req = http.request(options, function(res) {
-              console.log("statusCode: ", res.statusCode);
-              console.log("headers: ", res.headers);
-              res.on('data', function(d) {
-                  process.stdout.write(d);
-                  successCallback(JSON.parse(d));
-              });
+            console.log("statusCode: ", res.statusCode);
+            console.log("headers: ", res.headers);
+            res.on('data', function(d) {
+                process.stdout.write(d);
+                successCallback(JSON.parse(d));
+            });
         });
         if (body) {
             console.log("body: ", JSON.stringify(body));
             req.write(JSON.stringify(body)); 
         }
         req.end();
-	req.on('error', function(e) {
-	  console.error(e);
-          errorCallback && errorCallback(e); 
-	});
+	    req.on('error', function(e) {
+            console.error(e);       
+            errorCallback && errorCallback(e); 
+	    });
     };
 
     self.onError = function(message, errorMessage) {
 	    return function (e) {
-		message.status = "Failure";
-		message.error = e;
-		self.saveMessage(message);
-		self.replyToSender(message, errorMessage + " Reason: " + e); 
+		    message.status = "Failure";
+		    message.error = e;
+		    self.saveMessage(message);
+		    self.replyToSender(message, errorMessage + " Reason: " + JSON.stringify(e)); 
 	    };
     };  
 
@@ -331,32 +331,34 @@ var EBUIApp = function() {
     };
 
     self.createInstance = function(message) {
-        var callbacks = {
-            onData: function (d) {
-                message.instanceId = d.objectId;	
-                message.status = "Processed";
-                self.saveMessage(message);
-                self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
-            },
-            onError: self.onError(message, "Error processing your message, object not created.")
-        };
-        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', { values: message.values });
+        self.getInstanceTemplate(message, function (template) {
+		    var mergedValues = merge(true, template.values, message.values);
+            var callbacks = {
+                onData: function (d) {
+                    message.instanceId = d.objectId;	
+                    message.status = "Processed";
+                    self.saveMessage(message);
+                    self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
+                },
+                onError: self.onError(message, "Error processing your message, object not created.")
+            };
+            self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', { values: message.values });
+	    }, self.onError(message, "Error creating an object for your message."));
     };
 
     self.updateInstance = function(message) {
         self.getInstance(message, function (existing) {
-		var mergedValues = merge(true, existing.values, message.values);
-		var callbacks = {
-		    onData: function (d) {
-			self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
-			message.status = "Processed";
-			self.saveMessage(message);
-		    },
-		    onError: self.onError(message, "Error processing your message, object not updated.")
-		};
-		self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', { values: mergedValues });
-	}, 
-	self.onError(message, "Error retrieving the object for your message."));
+		    var mergedValues = merge(true, existing.values, message.values);
+		    var callbacks = {
+		        onData: function (d) {
+			        self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
+			        message.status = "Processed";
+			        self.saveMessage(message);
+		        },
+		        onError: self.onError(message, "Error processing your message, object not updated.")
+		    };
+		    self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', { values: mergedValues });
+	    }, self.onError(message, "Error retrieving the object for your message."));
     };
 
     self.getInstance = function(message, onData, onError) {
@@ -365,6 +367,14 @@ var EBUIApp = function() {
             onError: onError
         };
         self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId);
+    };
+
+    self.getInstanceTemplate = function(message, onData, onError) {
+        var callbacks = {
+            onData: onData,
+            onError: onError
+        };
+        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/_template');
     };
 
     self.saveMessage = function(message) {
