@@ -286,7 +286,7 @@ var EBUIApp = function() {
         self.saveMessage(message);    
     };
 
-    self.performKirraRequest = function(callbacks, application, path, method, body) {
+    self.performKirraRequest = function(callbacks, application, path, method, expectedStatus, body) {
         var parsedKirraBaseUrl = url.parse(self.kirraBaseUrl);	        
 	    var options = {
 	      hostname: parsedKirraBaseUrl.hostname,
@@ -303,7 +303,13 @@ var EBUIApp = function() {
             console.log("headers: ", res.headers);
             res.on('data', function(d) {
                 process.stdout.write(d);
-                successCallback(JSON.parse(d));
+                if (expectedStatus && expectedStatus !== res.statusCode) {
+                    if (errorCallback) {
+                        errorCallback(JSON.parse(d));
+                    }
+                } else {
+                    successCallback(JSON.parse(d));
+                }
             });
         });
         if (body) {
@@ -342,7 +348,7 @@ var EBUIApp = function() {
                 },
                 onError: self.onError(message, "Error processing your message, object not created.")
             };
-            self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', { values: message.values });
+            self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', 201, { values: message.values });
 	    }, self.onError(message, "Error creating an object for your message."));
     };
 
@@ -357,7 +363,7 @@ var EBUIApp = function() {
 		        },
 		        onError: self.onError(message, "Error processing your message, object not updated.")
 		    };
-		    self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', { values: mergedValues });
+		    self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', 200, { values: mergedValues });
 	    }, self.onError(message, "Error retrieving the object for your message."));
     };
 
@@ -366,7 +372,7 @@ var EBUIApp = function() {
             onData: onData,
             onError: onError
         };
-        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId);
+        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, undefined, 200);
     };
 
     self.getInstanceTemplate = function(message, onData, onError) {
@@ -374,7 +380,7 @@ var EBUIApp = function() {
             onData: onData,
             onError: onError
         };
-        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/_template');
+        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/_template', undefined, 200);
     };
 
     self.saveMessage = function(message) {
