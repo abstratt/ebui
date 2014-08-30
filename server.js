@@ -217,7 +217,7 @@ var EBUIApp = function() {
 		    if (processingRules) {
                         if (current.indexOf('--') === 0) {
                             ignoring = true;
-                        else if (!ignoring) {
+                        } else if (!ignoring) {
 			    // after the command section separator, everything is a command
 			    processingRules.push(current);
                         }
