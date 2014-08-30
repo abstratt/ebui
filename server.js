@@ -319,7 +319,7 @@ var EBUIApp = function() {
     };  
 
     self.makeEmailForInstance = function(message) {
-        return message.entity.replace('.', '_') + '-' + message.instanceId + '.' + message.application + '@inbox.cloudfier.com';
+        return message.entity.replace('.', '_') + '-' + message.instanceId + '. ' + message.application + '@inbox.cloudfier.com';
     };
 
     self.createInstance = function(message) {
@@ -328,7 +328,7 @@ var EBUIApp = function() {
                 message.instanceId = d.objectId;	
                 message.status = "Processed";
                 self.saveMessage(message);
-                self.replyToSender(message, "Message successfully processed. Object was created.", self.makeEmailForInstance(message));
+                self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
             },
             onError: self.onError(message, "Error processing your message, object not created.")
         };
@@ -338,7 +338,7 @@ var EBUIApp = function() {
     self.updateInstance = function(message) {
         var callbacks = {
             onData: function (d) {
-                self.replyToSender(message, "Message successfully processed. Object was updated.", self.makeEmailForInstance(message));
+                self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
                 message.status = "Processed";
                 self.saveMessage(message);
             },
