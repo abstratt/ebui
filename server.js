@@ -319,7 +319,7 @@ var EBUIApp = function() {
     };  
 
     self.makeEmailForInstance = function(message) {
-        return message.entity.replace('.', '_') + '-' + message.instanceId + '-' + message.application + '@inbox.cloudfier.com';
+        return message.entity.replace('.', '_') + '-' + message.instanceId + '.' + message.application + '@inbox.cloudfier.com';
     };
 
     self.createInstance = function(message) {
