@@ -302,6 +302,7 @@ var EBUIApp = function() {
               });
         });
         if (body) {
+            console.log("body: ", JSON.stringify(body));
             req.write(JSON.stringify(body)); 
         }
         req.end();
@@ -321,7 +322,7 @@ var EBUIApp = function() {
     };  
 
     self.makeEmailForInstance = function(message) {
-        return message.entity.replace('.', '_') + '-' + message.instanceId + '. ' + message.application + '@inbox.cloudfier.com';
+        return message.entity.replace('.', '_') + '-' + message.instanceId + '.' + message.application + '@inbox.cloudfier.com';
     };
 
     self.createInstance = function(message) {
@@ -338,15 +339,27 @@ var EBUIApp = function() {
     };
 
     self.updateInstance = function(message) {
+        self.getInstance(message, function (existing) {
+		var mergedValues = merge(true, existing.values, message.values);
+		var callbacks = {
+		    onData: function (d) {
+			self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
+			message.status = "Processed";
+			self.saveMessage(message);
+		    },
+		    onError: self.onError(message, "Error processing your message, object not updated.")
+		};
+		self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', { values: mergedValues });
+	}, 
+	self.onError(message, "Error retrieving the object for your message."));
+    };
+
+    self.getInstance = function(message, callback, onError) {
         var callbacks = {
-            onData: function (d) {
-                self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
-                message.status = "Processed";
-                self.saveMessage(message);
-            },
-            onError: self.onError(message, "Error processing your message, object not updated.")
+            onData: callback,
+            onError: onError
         };
-        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', { values: message.values });
+        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId);
     };
 
     self.saveMessage = function(message) {
