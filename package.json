@@ -29,8 +29,7 @@
     "body-parser": "1.6.5",
     "mongodb": "*",
     "monk": "*",
-    "js-yaml": "*",
-    "merge" : "*"
+    "js-yaml": "*"
   },
   "devDependencies": {},
   "bundleDependencies": [],

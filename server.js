@@ -1,5 +1,6 @@
 #!/bin/env node
 
+var q = require('q');
 var express = require('express');
 var fs = require('fs');
 var bodyParser = require('body-parser');
@@ -8,12 +9,13 @@ var mongo = require('mongodb');
 var monk = require('monk');
 
 var https = require("https");
-var http = require("http");
 
 var url = require("url");
 
 var yaml = require("js-yaml");
-var merge = require("merge");
+
+
+var kirra = require("./kirra-client.js");
 
 var EBUIApp = function() {
 
@@ -38,8 +40,8 @@ var EBUIApp = function() {
         self.dbpassword = process.env.OPENSHIFT_MONGODB_DB_PASSWORD || '';
         self.dbcreds = self.dbusername ? (self.dbusername + ':' + self.dbpassword + '@') : '';
         self.mandrillkey = process.env.MANDRILL_API_KEY || '';
-        self.fromEmail = process.env.FROM_EMAIL || '';  
-        self.fromName = process.env.FROM_NAME || '';
+        self.fromEmail = process.env.FROM_EMAIL || 'support@cloudfier.com';  
+        self.fromName = process.env.FROM_NAME || 'Cloudfier Support';
         self.baseUrl = process.env.BASE_URL || ("http://" + self.ipaddress + "/");
         self.kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
 
@@ -47,8 +49,6 @@ var EBUIApp = function() {
         console.log("Kirra API url: \"" + self.kirraBaseUrl + '"');
         console.log("fromEmail: \"" + self.fromEmail + '"');
         console.log("fromName: \"" + self.fromName + '"');
-        if (self.fromEmail === '') throw new Error("No email address set");
-        if (self.fromName === '') throw new Error("No email name set");
     };
 
     /**
@@ -111,18 +111,12 @@ var EBUIApp = function() {
         });
 
         self.app.post("/events/", function(req, res) {
-            console.log("Event batch received:");
-            console.log("==========================================================");
-            console.log(req.body);
-            console.log("==========================================================");
             var events = req.body.mandrill_events || [];
             if (typeof events === "string") {
                 events = JSON.parse(events);
             }
             events.forEach(function (event) {
                 var newMessage = self.parseEventAsMessage(event);
-                console.log("New message: ");
-                console.log(newMessage);
                 self.saveMessage(newMessage);
             });
             res.send(204);
@@ -194,8 +188,6 @@ var EBUIApp = function() {
               headers: { 'content-type': 'application/json' }
 	    };
         var req = https.request(options, function(res) {
-              console.log("statusCode: ", res.statusCode);
-              console.log("headers: ", res.headers);
               res.on('data', function(d) {
                   process.stdout.write(d);
               });
@@ -277,58 +269,24 @@ var EBUIApp = function() {
             self.replyToSender(message, "Unfortunately, your message could not be processed.");
         } else {
             if (message.instanceId) {
-                self.updateInstance(message);
+                self.processUpdateMessage(message);
             } else {
-                self.createInstance(message);
+                self.processCreationMessage(message);
             }
             message.status = 'Processing';
         }
         self.saveMessage(message);    
     };
 
-    self.performKirraRequest = function(callbacks, application, path, method, expectedStatus, body) {
-        var parsedKirraBaseUrl = url.parse(self.kirraBaseUrl);	        
-	    var options = {
-	      hostname: parsedKirraBaseUrl.hostname,
-	      path: parsedKirraBaseUrl.pathname + application + path,
-	      method: method || 'GET',
-              headers: { 'content-type': 'application/json' }
-	    };
-        console.log("Kirra request: " + JSON.stringify(options));
-        var successCallback = (typeof callbacks === 'function') ? callbacks : callbacks.onData;
-        var defaultError = function (e) { console.error(e); }; 
-        var errorCallback = (typeof callbacks === 'object') ? callbacks.onError : undefined;
-        var req = http.request(options, function(res) {
-            console.log("statusCode: ", res.statusCode);
-            console.log("headers: ", res.headers);
-            res.on('data', function(d) {
-                process.stdout.write(d);
-                if (expectedStatus && expectedStatus !== res.statusCode) {
-                    if (errorCallback) {
-                        errorCallback(JSON.parse(d));
-                    }
-                } else {
-                    successCallback(JSON.parse(d));
-                }
-            });
-        });
-        if (body) {
-            console.log("body: ", JSON.stringify(body));
-            req.write(JSON.stringify(body)); 
-        }
-        req.end();
-	    req.on('error', function(e) {
-            console.error(e);       
-            errorCallback && errorCallback(e); 
-	    });
-    };
-
     self.onError = function(message, errorMessage) {
 	    return function (e) {
+	        console.log("Error: " + errorMessage);
+	        console.log(JSON.stringify(e));
 		    message.status = "Failure";
 		    message.error = e;
 		    self.saveMessage(message);
-		    self.replyToSender(message, errorMessage + " Reason: " + JSON.stringify(e)); 
+		    self.replyToSender(message, errorMessage + " Reason: " + e.message);
+		    return new Error(e.message); 
 	    };
     };  
 
@@ -336,51 +294,26 @@ var EBUIApp = function() {
         return message.entity.replace('.', '_') + '-' + message.instanceId + '.' + message.application + '@inbox.cloudfier.com';
     };
 
-    self.createInstance = function(message) {
-        self.getInstanceTemplate(message, function (template) {
-		    var mergedValues = merge(true, template.values, message.values);
-            var callbacks = {
-                onData: function (d) {
-                    message.instanceId = d.objectId;	
-                    message.status = "Processed";
-                    self.saveMessage(message);
-                    self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
-                },
-                onError: self.onError(message, "Error processing your message, object not created.")
-            };
-            self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/', 'POST', 201, { values: message.values });
-	    }, self.onError(message, "Error creating an object for your message."));
+    self.processCreationMessage = function(message) {
+        var kirraApp = kirra.build(self.kirraBaseUrl, message.application);
+        console.log("kirraApp: "+ JSON.stringify(kirraApp));
+        return kirraApp.createInstance(message).then(function (d) {
+            message.instanceId = d.objectId;	
+            message.status = "Processed";
+            self.saveMessage(message);
+            self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
+            return d;             
+        }, self.onError(message, "Error processing your message, object not created."));
     };
 
-    self.updateInstance = function(message) {
-        self.getInstance(message, function (existing) {
-		    var mergedValues = merge(true, existing.values, message.values);
-		    var callbacks = {
-		        onData: function (d) {
-			        self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
-			        message.status = "Processed";
-			        self.saveMessage(message);
-		        },
-		        onError: self.onError(message, "Error processing your message, object not updated.")
-		    };
-		    self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, 'PUT', 200, { values: mergedValues });
-	    }, self.onError(message, "Error retrieving the object for your message."));
-    };
-
-    self.getInstance = function(message, onData, onError) {
-        var callbacks = {
-            onData: onData,
-            onError: onError
-        };
-        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/' + message.instanceId, undefined, 200);
-    };
-
-    self.getInstanceTemplate = function(message, onData, onError) {
-        var callbacks = {
-            onData: onData,
-            onError: onError
-        };
-        self.performKirraRequest(callbacks, message.application, '/entities/' + message.entity + '/instances/_template', undefined, 200);
+    self.processUpdateMessage = function(message) {
+        var kirraApp = kirra.build(self.kirraBaseUrl, message.application);
+        return kirraApp.updateInstance(message).then(function (d) {
+	        self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
+	        message.status = "Processed";
+	        self.saveMessage(message);
+	        return d;
+        }, self.onError(message, "Error processing your message, object not updated."));
     };
 
     self.saveMessage = function(message) {
@@ -402,3 +335,4 @@ var ebuiApp = new EBUIApp();
 ebuiApp.initialize();
 ebuiApp.start();
 
+var app = exports = module.exports = ebuiApp;
