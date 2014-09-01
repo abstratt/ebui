@@ -6,7 +6,7 @@ server.kirraBaseUrl = "http://localhost/services/api-v2/";
 var assert = require("assert");
 var kirraApplicationId = 'demo-cloudfier-examples-expenses';
 var kirraEntity = 'expenses.Employee';
-suite('Server', function() {
+suite('Kirra Client', function() {
     var collectedUserNotifications = [];
     server.replyToSender = function(message, errorMessage) { 
         collectedUserNotifications.push({ errorMessage: errorMessage, message: message });
@@ -14,9 +14,6 @@ suite('Server', function() {
     var suite = this; 
     suite.kirra = kirraClient.build("http://localhost/services/api-v2/", kirraApplicationId)
      
-    test('makeEmailForInstance', function(){
-        assert.equal("expenses_Employee-2.myapp@inbox.cloudfier.com", server.makeEmailForInstance({entity: 'expenses.Employee', application: 'myapp', instanceId: 2}));
-    });
     
     var objectId;
     test('createInstance', function(done) {
@@ -37,6 +34,13 @@ suite('Server', function() {
         }).then(function(instance) {
             assert.equal("John Moe", instance.values.name); 
         }).then(done, done);
+    });
+});
+
+suite('Server', function() {
+    
+    test('makeEmailForInstance', function(){
+        assert.equal("expenses_Employee-2.myapp@inbox.cloudfier.com", server.makeEmailForInstance({entity: 'expenses.Employee', application: 'myapp', instanceId: 2}));
     });
     
     test('processPendingMessage - invalid', function(done) {
