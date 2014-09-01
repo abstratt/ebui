@@ -2,7 +2,7 @@ var mongo = require('mongodb');
 var monk = require('monk');
 var util = require('util');
 
-var build = function (dbhost, dbport, dbname, dbusername, dbpassword) {
+var MessageStore = function (dbhost, dbport, dbname, dbusername, dbpassword) {
     var self = this;
     self.dbhost = dbhost;
     self.dbport = dbport;
@@ -41,4 +41,4 @@ var build = function (dbhost, dbport, dbname, dbusername, dbpassword) {
 };
 
 
-var exports = module.exports = { build: build };
+var exports = module.exports = MessageStore;

@@ -2,18 +2,16 @@ var http = require("http");
 var url = require("url");
 var q = require('q');
 
+var ebuiUtil = require("./util.js");
 
-var merge = function (obj1, obj2) {
-    for (var key in obj2) {
-        if (obj1[key] === undefined) {
-            obj1[key] = obj2[key];
-        }
-    }
-    return obj1;
-};
+var assert = ebuiUtil.assert;
+var merge = ebuiUtil.merge;
 
-var build = function (baseUrl, application) {
+var Kirra = function (baseUrl, application) {
     var self = this;
+    
+    assert(baseUrl, "baseUrl missing");
+    assert(application, "application missing");
     
     self.baseUrl = baseUrl;
     
@@ -81,4 +79,4 @@ var build = function (baseUrl, application) {
     return self;
 };
 
-var exports = module.exports = { build: build };
+var exports = module.exports = Kirra;
