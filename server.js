@@ -105,19 +105,11 @@ var EBUIApp = function() {
         });
 
         self.app.post("/events/", function(req, res) {
-            var events = req.body.mandrill_events || [];
-            if (typeof events === "string") {
-                events = JSON.parse(events);
-            }
-            events.forEach(function (event) {
-                var newMessage = self.parseEventAsMessage(event);
-                self.messageStore.saveMessage(newMessage);
-            });
-            res.send(204);
+            return self.mandrillGateway.handleInboundEmail(req, res, self.messageStore);
         });
 
         self.app.get("/events/", function(req, res) {
-            return self.mandrillGateway.handleInboundEmail(req, res, self.messageStore);
+            res.send(204);
         });
 
 
