@@ -5,9 +5,6 @@ var express = require('express');
 var fs = require('fs');
 var bodyParser = require('body-parser');
 
-var mongo = require('mongodb');
-var monk = require('monk');
-
 var https = require("https");
 
 var url = require("url");
@@ -16,6 +13,8 @@ var yaml = require("js-yaml");
 
 
 var kirra = require("./kirra-client.js");
+
+var messageStore = require("./message-store.js");
 
 var EBUIApp = function() {
 
@@ -38,7 +37,6 @@ var EBUIApp = function() {
         self.dbname = process.env.OPENSHIFT_MONGODB_DB_NAME || 'mailflowjs';
         self.dbusername = process.env.OPENSHIFT_MONGODB_DB_USERNAME || '';
         self.dbpassword = process.env.OPENSHIFT_MONGODB_DB_PASSWORD || '';
-        self.dbcreds = self.dbusername ? (self.dbusername + ':' + self.dbpassword + '@') : '';
         self.mandrillkey = process.env.MANDRILL_API_KEY || '';
         self.fromEmail = process.env.FROM_EMAIL || 'support@cloudfier.com';  
         self.fromName = process.env.FROM_NAME || 'Cloudfier Support';
@@ -97,11 +95,8 @@ var EBUIApp = function() {
         }));
         self.app.use(bodyParser.json());
 
-        var dbString = self.dbcreds + self.dbhost + ':' + self.dbport + '/' + self.dbname;
-        self.db = monk(dbString);
-
         self.app.use(function(req, res, next) {
-            req.db = self.db;
+            req.messageStore = self.messageStore;
             next();
         });
         self.app.get("/", function(req, res) {
@@ -117,7 +112,7 @@ var EBUIApp = function() {
             }
             events.forEach(function (event) {
                 var newMessage = self.parseEventAsMessage(event);
-                self.saveMessage(newMessage);
+                self.messageStore.saveMessage(newMessage);
             });
             res.send(204);
         });
@@ -128,7 +123,7 @@ var EBUIApp = function() {
 
 
         self.app.get("/messages/", function(req, res) {
-            req.db.get('messages').find({}, function(error, docs) {
+            req.messageStore.getAllMessages().then(function(docs) {
                 res.json(docs || []);
             });
         });
@@ -141,6 +136,8 @@ var EBUIApp = function() {
     self.initialize = function() {
         self.setupVariables();
         self.setupTerminationHandlers();
+
+        self.messageStore = messageStore.build(self.dbhost, self.dbport, self.dbname, self.dbusername, self.dbpassword);        
 
         // Create the express server and routes.
         self.initializeServer();
@@ -159,7 +156,9 @@ var EBUIApp = function() {
         
         var interval;
         interval = setInterval(function() {
+            console.log('Processing pending messages');
             self.processPendingMessages();
+            console.log('Done');
         }, 10000);
     };
 
@@ -249,33 +248,27 @@ var EBUIApp = function() {
     };
 
     self.processPendingMessages = function () {
-        console.log('Processing pending messages');
-        self.db.get('messages').find({ 
-            $or: [ 
-                { status: { $exists: false } }, 
-                { status: 'Pending' } 
-            ] 
-        }).each(function (message) {
+        return self.messageStore.getPendingMessages('messages').each(function (message) {
             self.processPendingMessage(message);
         });
-        console.log('Done');
     };
 
     self.processPendingMessage = function (message) {
-        console.log("Processing...");
+        console.log("Processing " + message._id + "...");
 
         if (!message.application) {
             message.status = 'Invalid';
             self.replyToSender(message, "Unfortunately, your message could not be processed.");
-        } else {
-            if (message.instanceId) {
-                self.processUpdateMessage(message);
-            } else {
-                self.processCreationMessage(message);
-            }
-            message.status = 'Processing';
+            return self.messageStore.saveMessage(message).then(function() { return message; });    
         }
-        self.saveMessage(message);    
+        message.status = 'Processing';
+        return self.messageStore.saveMessage(message).then(function () {
+            if (message.instanceId) {
+                return self.processUpdateMessage(message);
+            } else {
+                return self.processCreationMessage(message);
+            }
+        }).then(function() { return message; });
     };
 
     self.onError = function(message, errorMessage) {
@@ -284,7 +277,7 @@ var EBUIApp = function() {
 	        console.log(JSON.stringify(e));
 		    message.status = "Failure";
 		    message.error = e;
-		    self.saveMessage(message);
+		    self.messageStore.saveMessage(message);
 		    self.replyToSender(message, errorMessage + " Reason: " + e.message);
 		    return new Error(e.message); 
 	    };
@@ -300,7 +293,7 @@ var EBUIApp = function() {
         return kirraApp.createInstance(message).then(function (d) {
             message.instanceId = d.objectId;	
             message.status = "Processed";
-            self.saveMessage(message);
+            self.messageStore.saveMessage(message);
             self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
             return d;             
         }, self.onError(message, "Error processing your message, object not created."));
@@ -311,18 +304,9 @@ var EBUIApp = function() {
         return kirraApp.updateInstance(message).then(function (d) {
 	        self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
 	        message.status = "Processed";
-	        self.saveMessage(message);
+	        self.messageStore.saveMessage(message);
 	        return d;
         }, self.onError(message, "Error processing your message, object not updated."));
-    };
-
-    self.saveMessage = function(message) {
-        var messages = self.db.get('messages');
-        if (message._id) {
-            messages.updateById(message._id, message);
-        } else {
-            messages.insert(message);
-        }
     };
 
     self.resolveUrl = function(relative) {
