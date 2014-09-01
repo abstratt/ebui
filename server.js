@@ -109,6 +109,7 @@ var EBUIApp = function() {
         });
 
         self.app.get("/events/", function(req, res) {
+            // mandrill sends a HEAD
             res.send(204);
         });
 
