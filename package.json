@@ -29,9 +29,12 @@
     "body-parser": "1.6.5",
     "mongodb": "*",
     "monk": "*",
-    "js-yaml": "*"
+    "js-yaml": "*",
+    "q": "1.0.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+     "mocha": "*"
+  },
   "bundleDependencies": [],
 
   "private": true,
