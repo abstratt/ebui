@@ -117,7 +117,7 @@ var EBUIApp = function() {
         });
 
         self.app.get("/events/", function(req, res) {
-            return mandrillGateway.handleInboundEmail(req, res, self.messageStore);
+            return self.mandrillGateway.handleInboundEmail(req, res, self.messageStore);
         });
 
 
@@ -164,7 +164,7 @@ var EBUIApp = function() {
     };
 
     self.replyToSender = function(message, body, senderEmail) {
-        return mandrillGateway.replyToSender(message, body, senderEmail);
+        return self.mandrillGateway.replyToSender(message, body, senderEmail);
     };
 
     self.processPendingMessages = function () {
