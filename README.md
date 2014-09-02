@@ -2,7 +2,15 @@
 
 [![Build Status](https://textuml.ci.cloudbees.com/buildStatus/icon?job=kirra-api)](https://textuml.ci.cloudbees.com/job/ebui/)
 
-EBUI is an Email-Based User Interface. It acts as a front-end to any application that implements a [Kirra-compliant](http://abstratt.github.io/kirra/) REST API.
+EBUI is an Email-Based User Interface for business applications. It acts as a transactional email front-end to any application that implements a [Kirra-compliant](http://abstratt.github.io/kirra/) REST API.
+
+### Status
+
+This is still an experiment. What is working:
+- can create a new business entity instance
+- can update an existing business entity instance
+
+### How does it work?
 
 #### Entity inboxes
 
