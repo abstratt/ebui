@@ -1,5 +1,7 @@
 ## EBUI is an Email-Based User Interface
 
+[![Build Status](https://textuml.ci.cloudbees.com/buildStatus/icon?job=kirra-api)](https://textuml.ci.cloudbees.com/job/ebui/)
+
 EBUI is an Email-Based User Interface. It acts as a front-end to any application that implements a [Kirra-compliant](http://abstratt.github.io/kirra/) REST API.
 
 #### Entity inboxes
