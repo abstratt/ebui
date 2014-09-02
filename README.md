@@ -10,6 +10,8 @@ This is still an experiment. What is working:
 - can create a new business entity instance
 - can update an existing business entity instance
 
+Interested? Please join by contributing code, bugs, feature requests etc.
+
 ### How does it work?
 
 #### Entity inboxes
