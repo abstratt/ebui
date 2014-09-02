@@ -10,7 +10,8 @@ var kirraApplicationId = 'demo-cloudfier-examples-expenses';
 var kirraEntity = 'expenses.Employee';
 
 suite('EBUI', function() {
-    var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
+    this.timeout(5000);
+    var messageStore = new MessageStore('kahana.mongohq.com', 10030, 'abstratt-test', 'test', 'test');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, errorMessage) { 
         collectedUserNotifications.push({ errorMessage: errorMessage, message: message });
