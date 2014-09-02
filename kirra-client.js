@@ -30,7 +30,7 @@ var Kirra = function (baseUrl, application) {
         var req = http.request(options, function(res) {
             res.on('data', function(d) {
                 var parsed = JSON.parse(d);
-                if (expectedStatus && expectedStatus !== res.statusCode) {
+                if (expectedStatus && (expectedStatus !== res.statusCode || (typeof expectedStatus === 'object' && !expectedStatus.indexOf(res.statusCode))) {
                     console.log("Expected: " + expectedStatus + " - Actual: " + res.statusCode);
                     deferred.reject(parsed);
                 } else {
@@ -51,7 +51,7 @@ var Kirra = function (baseUrl, application) {
     self.createInstance = function(message) {
         return self.getInstanceTemplate(message).then(function (template) {
 		    var mergedValues = merge(merge({}, message.values), template.values);
-            return self.performRequest('/entities/' + message.entity + '/instances/', 'POST', 201, 
+            return self.performRequest('/entities/' + message.entity + '/instances/', 'POST', [201, 200], 
                 { values: mergedValues }
             );
 	    });
