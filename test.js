@@ -4,7 +4,7 @@ var MessageProcessor = require("./message-processor.js");
 var MessageStore = require("./message-store.js");
 var MandrillGateway = require("./mandrill-gateway.js");
 
-var kirraBaseUrl = "http://localhost/services/api-v2/";
+var kirraBaseUrl = "http://develop.cloudfier.com/services/api-v2/";
 var assert = require("assert");
 var kirraApplicationId = 'demo-cloudfier-examples-expenses';
 var kirraEntity = 'expenses.Employee';
@@ -18,7 +18,7 @@ suite('EBUI', function() {
 
     suite('Kirra Client', function() {
         var suite = this;
-        suite.kirra = new Kirra("http://localhost/services/api-v2/", kirraApplicationId)
+        suite.kirra = new Kirra(kirraBaseUrl, kirraApplicationId)
         
         var objectId;
         test('createInstance', function(done) {
@@ -78,6 +78,28 @@ suite('EBUI', function() {
             assert.equal(204, res.status);            
         });
     
+    });
+    
+    suite('MessageStore', function() {
+        var messageDocumentId;
+        test('creation', function(done){
+            messageStore.saveMessage({ }).then(
+                function (m) { 
+                    assert.ok(m._id);
+                    messageDocumentId = m._id;
+                }
+            ).then(done, done);
+        });
+        test('lookUp', function(done){
+            messageStore.getById(messageDocumentId).then(
+                function (m) { 
+                    assert.ok(m);
+                    assert.equal(1, m.length);
+                    assert.equal(messageDocumentId.toString(), m[0]._id.toString());                    
+                }
+            ).then(done, done);
+        });
+
     });
 
     suite('MessageProcessor', function() {
