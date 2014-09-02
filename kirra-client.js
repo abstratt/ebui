@@ -30,7 +30,10 @@ var Kirra = function (baseUrl, application) {
         var req = http.request(options, function(res) {
             res.on('data', function(d) {
                 var parsed = JSON.parse(d);
-                if (expectedStatus && (expectedStatus !== res.statusCode || (typeof expectedStatus === 'object' && !expectedStatus.indexOf(res.statusCode))) {
+                if (
+                    (typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
+                    (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)
+                ) {
                     console.log("Expected: " + expectedStatus + " - Actual: " + res.statusCode);
                     deferred.reject(parsed);
                 } else {
