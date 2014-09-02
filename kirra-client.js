@@ -60,8 +60,6 @@ var Kirra = function (baseUrl, application) {
     self.updateInstance = function(message) {
         return self.getInstance(message).then(function (existing) {
 		    var mergedValues = merge(merge({}, message.values), existing.values);
-		    console.log("merged");
-		    console.log(mergedValues);
 		    return self.performRequest('/entities/' + message.entity + '/instances/' + message.objectId, 'PUT', 200, 
 		        { values: mergedValues }
 	        );

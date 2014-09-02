@@ -2,6 +2,7 @@ var util = require("util");
 var Kirra = require("./kirra-client.js");
 var MessageProcessor = require("./message-processor.js");
 var MessageStore = require("./message-store.js");
+var MandrillGateway = require("./mandrill-gateway.js");
 
 var kirraBaseUrl = "http://localhost/services/api-v2/";
 var assert = require("assert");
@@ -39,6 +40,44 @@ suite('EBUI', function() {
                 assert.equal("John Moe", instance.values.name); 
             }).then(done, done);
         });
+    });
+
+    suite('MandrillGateway', function() {
+        var mandrillGateway = new MandrillGateway();
+        test('handleInboundEmail', function() {
+            var events = [
+                {
+                    msg: {
+                        email: "inbox@domain.com",
+                        from_email: "fromEmail@domain.com",
+                        from_name: "From Name",
+                        from_email: "fromEmail@domain.com",                        
+                        to: "toEmail@domain.com",                        
+                        subject: "This is the subject",                                                
+                        text: "Line 1\nLine 2\nLine 3",
+                        headers: {
+                            "Message-Id" : "message-id"
+                        }   
+                    }
+                }
+            ];
+            var req = { body: { mandrill_events: JSON.stringify(events) } };
+            var res = { send: function(status) { this.status = status; } };
+            var messageStore = { messages : [], saveMessage : function (message) { this.messages.push(message); } };
+            mandrillGateway.handleInboundEmail(req, res, messageStore);
+            assert.equal(1, messageStore.messages.length);
+            var message = messageStore.messages[0];
+            assert.equal("Pending", message.status);                                                                                    
+            assert.equal("fromEmail@domain.com", message.fromEmail);            
+            assert.equal("From Name", message.fromName);            
+            assert.equal("inbox@domain.com", message.account);            
+            assert.equal("toEmail@domain.com", message.toEmail);            
+            assert.equal("This is the subject", message.subject);                                                            
+            assert.equal("Line 1\nLine 2\nLine 3", message.text);                                                                        
+            assert.equal("message-id", message._contextMessageId);                                                                                    
+            assert.equal(204, res.status);            
+        });
+    
     });
 
     suite('MessageProcessor', function() {

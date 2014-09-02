@@ -23,7 +23,7 @@ var MandrillGateway = function (mandrillKey, defaultFromEmail, defaultFromName) 
             };
             messageStore.saveMessage(newMessage);
         });
-        res.send(204);
+        return res.send(204);
     };
     
     self.replyToSender = function(message, body, senderEmail) {
