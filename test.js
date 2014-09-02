@@ -104,6 +104,21 @@ suite('EBUI', function() {
             }).then(done, done);
         });
 
+        test('processPendingMessage - missing required field', function(done) {
+            messageStore.saveMessage({ 
+                application : kirraApplicationId, 
+                entity : kirraEntity, 
+                values: {} 
+            }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                assert.equal("Failure", m.status);
+                assert.ok(m.error);
+                assert.equal("A value is required for Name", m.error.message);
+            }).then(done, done);
+        });
+
+
         test('parseMessage - entity account', function() {
             var message = { 
                 account : 'namespace_Entity.myapplication@domain',
