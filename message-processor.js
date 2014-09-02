@@ -55,8 +55,6 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
     };
 
     self.processPendingMessage = function (message) {
-        console.log("Processing " + message._id + "...");
-
         self.parseMessage(message);
 
         if (!message.application) {
@@ -80,7 +78,6 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
 
     self.processCreationMessage = function(message) {
         var kirraApp = new Kirra(kirraBaseUrl, message.application);
-        console.log("kirraApp: "+ JSON.stringify(kirraApp));
         return kirraApp.createInstance(message).then(function (d) {
             message.instanceId = d.objectId;	
             message.status = "Processed";
@@ -106,8 +103,6 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
     
     self.onError = function(message, errorMessage) {
 	    return function (e) {
-	        console.log("Error: " + errorMessage);
-	        console.log(JSON.stringify(e));
 		    message.status = "Failure";
 		    message.error = e;
 		    messageStore.saveMessage(message);

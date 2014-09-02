@@ -14,8 +14,6 @@ var MessageStore = function (dbhost, dbport, dbname, dbusername, dbpassword) {
     self.db = monk(self.dbConnectionString);
     
     self.saveMessage = function(message) {
-        console.log("Saving message");
-        console.log(JSON.stringify(message));
         var messages = self.db.get('messages');
         if (message._id) {
             return messages.updateById(message._id, message);

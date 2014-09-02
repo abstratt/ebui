@@ -25,7 +25,6 @@ var Kirra = function (baseUrl, application) {
           method: method || 'GET',
           headers: { 'content-type': 'application/json' }
         };
-        console.log("Kirra request: " + JSON.stringify(options));
         var deferred = q.defer();
         var req = http.request(options, function(res) {
             res.on('data', function(d) {
@@ -34,7 +33,6 @@ var Kirra = function (baseUrl, application) {
                     (typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
                     (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)
                 ) {
-                    console.log("Expected: " + expectedStatus + " - Actual: " + res.statusCode);
                     deferred.reject(parsed);
                 } else {
                     deferred.resolve(parsed);

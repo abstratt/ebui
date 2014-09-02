@@ -118,7 +118,6 @@ suite('EBUI', function() {
             }).then(done, done);
         });
 
-
         test('parseMessage - entity account', function() {
             var message = { 
                 account : 'namespace_Entity.myapplication@domain',
