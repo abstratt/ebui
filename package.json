@@ -1,22 +1,18 @@
 {
-  "name": "OpenShift-Sample-App",
+  "name": "EBUI",
   "version": "1.0.0",
-  "description": "OpenShift Sample Application",
+  "description": "Email-Based USer Interface for business applications",
   "keywords": [
-    "OpenShift",
-    "Node.js",
-    "application",
-    "openshift"
   ],
   "author": {
-    "name": "OpenShift",
-    "email": "ramr@example.org",
-    "url": "http://www.openshift.com/"
+    "name": "Rafael Chaves",
+    "email": "rafael@abstratt.com",
+    "url": "http://abstratt.com"
   },
-  "homepage": "http://www.openshift.com/",
+  "homepage": "http://abstratt.com/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openshift/origin-server"
+    "url": "https://github.com/abstratt/ebui"
   },
 
   "engines": {
