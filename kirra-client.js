@@ -29,9 +29,6 @@ var Kirra = function (baseUrl, application) {
         var req = http.request(options, function(res) {
             res.on('data', function(d) {
                 var parsed = JSON.parse(d);
-                console.log(path);
-                console.log(res.statusCode);
-                console.log(parsed);
                 if (
                     (typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
                     (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)
