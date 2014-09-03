@@ -10,6 +10,7 @@ var kirraEntity = 'expenses.Employee';
 
 suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
+    var kirra = new Kirra(kirraBaseUrl, kirraApplicationId)
     this.timeout(5000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
@@ -18,18 +19,16 @@ suite('EBUI', function() {
     } }; 
 
     suite('Kirra Client', function() {
-        var suite = this;
-        suite.kirra = new Kirra(kirraBaseUrl, kirraApplicationId)
 
         test('getApplication', function(done) {
-            suite.kirra.getApplication().then(function(application) {
+            kirra.getApplication().then(function(application) {
                 assert.equal("Expenses Application", application.applicationName); 
             }).then(done, done);
         });
 
         var objectId;
         test('createInstance', function(done) {
-            suite.kirra.createInstance({
+            kirra.createInstance({
                 entity: 'expenses.Employee', 
                 values: { name: "John Doe" }
             }).then(function(instance) {
@@ -39,7 +38,7 @@ suite('EBUI', function() {
         });
         
         test('updateInstance', function(done) {
-            suite.kirra.updateInstance({
+            kirra.updateInstance({
                 entity: 'expenses.Employee', 
                 objectId: objectId,
                 values: { name: "John Moe" }
@@ -125,11 +124,25 @@ suite('EBUI', function() {
             }).then(done).end();
         });
         
-        test('processPendingMessage - valid', function(done) {
+        test('processPendingMessage - creation', function(done) {
             messageStore.saveMessage({ application : kirraApplicationId, entity : kirraEntity, values: { name: "John Bonham"} }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal("Processed", m.status);
+                assert.equal("Created", m.status);
+            }).then(done, done);
+        });
+        
+        test('processPendingMessage - update', function(done) {
+            kirra.createInstance({
+                entity: 'expenses.Employee', 
+                values: { name: "John Doe" }
+            }).then(function(instance) {
+                var message = { objectId: instance.objectId, application : kirraApplicationId, entity : kirraEntity, values: instance.values };
+                return messageStore.saveMessage(message).then(function() { return message; });
+            }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                assert.equal("Updated", m.status);
             }).then(done, done);
         });
         

@@ -83,19 +83,17 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
     self.processCreationMessage = function(kirraApp, message) {
         return kirraApp.createInstance(message).then(function (d) {
             message.objectId = d.objectId;	
-            message.status = "Processed";
-            self.messageStore.saveMessage(message);
+            message.status = "Created";
             self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
-            return d;             
+            self.messageStore.saveMessage(message).then(function() { return d; });
         }, self.onError(message, "Error processing your message, object not created."));
     };
 
     self.processUpdateMessage = function(kirraApp, message) {
         return kirraApp.updateInstance(message).then(function (d) {
 	        self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
-	        message.status = "Processed";
-	        self.messageStore.saveMessage(message);
-	        return d;
+	        message.status = "Updated";
+	        return self.messageStore.saveMessage(message).then(function() { return d; });
         }, self.onError(message, "Error processing your message, object not updated."));
     };
     
