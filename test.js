@@ -4,12 +4,13 @@ var MessageProcessor = require("./message-processor.js");
 var MessageStore = require("./message-store.js");
 var MandrillGateway = require("./mandrill-gateway.js");
 
-var kirraBaseUrl = "http://develop.cloudfier.com/services/api-v2/";
 var assert = require("assert");
 var kirraApplicationId = 'demo-cloudfier-examples-expenses';
 var kirraEntity = 'expenses.Employee';
 
 suite('EBUI', function() {
+    var kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
+    this.timeout(5000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, errorMessage) { 
@@ -19,7 +20,13 @@ suite('EBUI', function() {
     suite('Kirra Client', function() {
         var suite = this;
         suite.kirra = new Kirra(kirraBaseUrl, kirraApplicationId)
-        
+
+        test('getApplication', function(done) {
+            suite.kirra.getApplication().then(function(application) {
+                assert.equal("Expenses Application", application.applicationName); 
+            }).then(done, done);
+        });
+
         var objectId;
         test('createInstance', function(done) {
             suite.kirra.createInstance({
@@ -115,7 +122,7 @@ suite('EBUI', function() {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal("Invalid", m.status);
-            }).then(done, done);
+            }).then(done).end();
         });
         
         test('processPendingMessage - valid', function(done) {
@@ -125,6 +132,18 @@ suite('EBUI', function() {
                 assert.equal("Processed", m.status);
             }).then(done, done);
         });
+        
+        test('processPendingMessage - unknown application', function(done) {
+            messageStore.saveMessage({ application : "unknown-app", entity : "namespace.Entity", values: { } }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function (m) {
+                console.log(m);
+                assert.equal("Failure", m.status);
+                assert.ok(m.error);
+                assert.equal("Project not found: unknown-app", m.error.message);
+            }).then(done, done);
+        });
+
 
         test('processPendingMessage - missing required field', function(done) {
             messageStore.saveMessage({ 

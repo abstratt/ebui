@@ -56,28 +56,31 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
 
     self.processPendingMessage = function (message) {
         self.parseMessage(message);
-
         if (!message.application) {
             message.status = 'Invalid';
             emailGateway.replyToSender(message, "Unfortunately, your message could not be processed.");
             return messageStore.saveMessage(message).then(function() { return message; });    
         }
+        var kirraApp = new Kirra(kirraBaseUrl, message.application);
         message.status = 'Processing';
         return messageStore.saveMessage(message).then(function () {
+            return kirraApp.getApplication();
+        }).then(function () {
             if (message.instanceId) {
-                return self.processUpdateMessage(message);
+                return self.processUpdateMessage(kirraApp, message);
             } else {
-                return self.processCreationMessage(message);
+                return self.processCreationMessage(kirraApp, message);
             }
-        }).then(function() { return message; });
+        }, self.onError(message, "Invalid application")).then(
+            function() { return message; }
+        );
     };
     
     self.makeEmailForInstance = function(message) {
         return message.entity.replace('.', '_') + '-' + message.instanceId + '.' + message.application + '@inbox.cloudfier.com';
     };
 
-    self.processCreationMessage = function(message) {
-        var kirraApp = new Kirra(kirraBaseUrl, message.application);
+    self.processCreationMessage = function(kirraApp, message) {
         return kirraApp.createInstance(message).then(function (d) {
             message.instanceId = d.objectId;	
             message.status = "Processed";
@@ -87,8 +90,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
         }, self.onError(message, "Error processing your message, object not created."));
     };
 
-    self.processUpdateMessage = function(message) {
-        var kirraApp = new Kirra(kirraBaseUrl, message.application);
+    self.processUpdateMessage = function(kirraApp, message) {
         return kirraApp.updateInstance(message).then(function (d) {
 	        self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
 	        message.status = "Processed";
@@ -106,8 +108,8 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
 		    message.status = "Failure";
 		    message.error = e;
 		    messageStore.saveMessage(message);
-		    self.replyToSender(message, errorMessage + " Reason: " + e.message);
-		    return new Error(e.message); 
+	        self.replyToSender(message, errorMessage + " Reason: " + e.message);
+	        return message;
 	    };
     };  
     
