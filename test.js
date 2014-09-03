@@ -137,7 +137,6 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : "unknown-app", entity : "namespace.Entity", values: { } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                console.log(m);
                 assert.equal("Failure", m.status);
                 assert.ok(m.error);
                 assert.equal("Project not found: unknown-app", m.error.message);
@@ -148,7 +147,6 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : kirraApplicationId, entity : "namespace.Entity", values: { } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                console.log(m);
                 assert.equal("Failure", m.status);
                 assert.ok(m.error);
                 assert.equal("Unknown entity: Entity on namespace: namespace", m.error.message);
@@ -159,7 +157,6 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : kirraApplicationId, entity : "expenses.Employee", objectId: "-1", values: { name: "Some Name" } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                console.log(m);
                 assert.equal("Failure", m.status);
                 assert.ok(m.error);
                 assert.equal("Instance not found", m.error.message);
