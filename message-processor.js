@@ -42,12 +42,12 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
         var values = yaml.safeLoad(processingRules.join('\n'));
         message.comment = comment;
         message.values = merge(merge({}, values), message.values);
-        // (entity)(-instanceid)?.(application)@<domain>
+        // (entity)(-objectId)?.(application)@<domain>
         //  Examples: issue.my-application@foo.bar.com and issue-43234cc221ad.my-application@foo.bar.com
         var elements = /^([a-z_A-Z]+)(?:-([^.]+))?\.([^@^.]+)@.*$/.exec(message.account);
         if (elements !== null) {
             message.entity = elements[1].replace("_", ".");
-            message.instanceId = elements[2];
+            message.objectId = elements[2];
             message.application = elements[3];
         }
         return message;
@@ -66,7 +66,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
         return messageStore.saveMessage(message).then(function () {
             return kirraApp.getApplication();
         }).then(function () {
-            if (message.instanceId) {
+            if (message.objectId) {
                 return self.processUpdateMessage(kirraApp, message);
             } else {
                 return self.processCreationMessage(kirraApp, message);
@@ -77,12 +77,12 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
     };
     
     self.makeEmailForInstance = function(message) {
-        return message.entity.replace('.', '_') + '-' + message.instanceId + '.' + message.application + '@inbox.cloudfier.com';
+        return message.entity.replace('.', '_') + '-' + message.objectId + '.' + message.application + '@inbox.cloudfier.com';
     };
 
     self.processCreationMessage = function(kirraApp, message) {
         return kirraApp.createInstance(message).then(function (d) {
-            message.instanceId = d.objectId;	
+            message.objectId = d.objectId;	
             message.status = "Processed";
             self.messageStore.saveMessage(message);
             self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));

@@ -114,7 +114,7 @@ suite('EBUI', function() {
         var messageProcessor = new MessageProcessor(emailGateway, messageStore, kirraBaseUrl);
         
         test('makeEmailForInstance', function(){
-            assert.equal("expenses_Employee-2.myapp@inbox.cloudfier.com", messageProcessor.makeEmailForInstance({entity: 'expenses.Employee', application: 'myapp', instanceId: 2}));
+            assert.equal("expenses_Employee-2.myapp@inbox.cloudfier.com", messageProcessor.makeEmailForInstance({entity: 'expenses.Employee', application: 'myapp', objectId: 2}));
         });
         
         test('processPendingMessage - invalid', function(done) {
@@ -143,6 +143,28 @@ suite('EBUI', function() {
                 assert.equal("Project not found: unknown-app", m.error.message);
             }).then(done, done);
         });
+        
+        test('processPendingMessage - unknown entity', function(done) {
+            messageStore.saveMessage({ application : kirraApplicationId, entity : "namespace.Entity", values: { } }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function (m) {
+                console.log(m);
+                assert.equal("Failure", m.status);
+                assert.ok(m.error);
+                assert.equal("Unknown entity: Entity on namespace: namespace", m.error.message);
+            }).then(done, done);
+        });
+
+        test('processPendingMessage - unknown instance', function(done) {
+            messageStore.saveMessage({ application : kirraApplicationId, entity : "expenses.Employee", objectId: "-1", values: { name: "Some Name" } }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function (m) {
+                console.log(m);
+                assert.equal("Failure", m.status);
+                assert.ok(m.error);
+                assert.equal("Instance not found", m.error.message);
+            }).then(done, done);
+        });
 
 
         test('processPendingMessage - missing required field', function(done) {
@@ -167,7 +189,7 @@ suite('EBUI', function() {
             messageProcessor.parseMessage(message);
             assert.equal("myapplication", message.application);
             assert.equal("namespace.Entity", message.entity);
-            assert.equal(undefined, message.instanceId);
+            assert.equal(undefined, message.objectId);
         });
         
         test('parseMessage - instance account', function() {
@@ -178,7 +200,7 @@ suite('EBUI', function() {
             messageProcessor.parseMessage(message);
             assert.equal("myapplication", message.application);
             assert.equal("namespace.Entity", message.entity);
-            assert.equal('1234', message.instanceId);
+            assert.equal('1234', message.objectId);
         });
         
         test('parseMessage - values', function() {
