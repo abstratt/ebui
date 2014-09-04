@@ -68,8 +68,21 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
         }).then(function () {
             return kirraApp.getEntity(message.entity);
         }).then(function (entity) {
-            // it is possible the entity was losely named, force a precise entity name
+            // it is possible the entity was loosely named, force a precise entity name
             message.entity = entity.fullName;
+            // it is possible the fields were loosely named, replace with precisely named fields
+            var properName = undefined;
+            if (message.values) {
+                var newValues = {};
+                for (var key in message.values) {
+                    for (var property in entity.properties) {
+                        if (entity.properties[property].name.toUpperCase() === key.toUpperCase() || entity.properties[property].label.toUpperCase() === key.toUpperCase()) {
+                            newValues[entity.properties[property].name] = message.values[key];
+                        }
+                    }
+                }
+                message.values = newValues;
+            }
             if (message.objectId) {
                 return self.processUpdateMessage(kirraApp, message);
             } else {

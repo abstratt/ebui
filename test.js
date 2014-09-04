@@ -11,7 +11,7 @@ var kirraEntity = 'expenses.Employee';
 suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
     var kirra = new Kirra(kirraBaseUrl, kirraApplicationId);
-    this.timeout(5000);
+    this.timeout(10000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, errorMessage) { 
@@ -152,6 +152,24 @@ suite('EBUI', function() {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Updated");
+            }).then(done, done);
+        });
+        
+        test('processPendingMessage - update with label as field names', function(done) {
+            kirra.createInstance({
+                entity: 'expenses.Employee', 
+                values: { name: "John Doe" }
+            }).then(function(instance) {
+                var message = { objectId: instance.objectId, application : kirraApplicationId, entity : kirraEntity, values: { Name : 'John Moe' } };
+                return messageStore.saveMessage(message).then(function() { return message; });
+            }).then(function (m) {
+                assert.equal(m.values.Name, "John Moe");                
+                assert.equal(m.values.name, undefined);                                
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                assert.equal(m.status, "Updated");
+                assert.equal(m.values.name, "John Moe");                
+                assert.equal(m.values.Name, undefined);                
             }).then(done, done);
         });
         
