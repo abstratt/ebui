@@ -10,7 +10,7 @@ var kirraEntity = 'expenses.Employee';
 
 suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
-    var kirra = new Kirra(kirraBaseUrl, kirraApplicationId)
+    var kirra = new Kirra(kirraBaseUrl, kirraApplicationId);
     this.timeout(5000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
@@ -100,8 +100,8 @@ suite('EBUI', function() {
             messageStore.getById(messageDocumentId).then(
                 function (m) { 
                     assert.ok(m);
-                    assert.equal(1, m.length);
-                    assert.equal(messageDocumentId.toString(), m[0]._id.toString());                    
+                    assert.equal(m.length, 1);
+                    assert.equal(m[0]._id.toString(), messageDocumentId.toString());                    
                 }
             ).then(done, done);
         });
@@ -120,7 +120,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal("Invalid", m.status);
+                assert.equal(m.status, "Invalid");
             }).then(done).end();
         });
         
@@ -128,7 +128,16 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : kirraApplicationId, entity : kirraEntity, values: { name: "John Bonham"} }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal("Created", m.status);
+                assert.equal(m.status, "Created");
+            }).then(done, done);
+        });
+        
+        test('processPendingMessage - creation with incomplete entity', function(done) {
+            messageStore.saveMessage({ application : kirraApplicationId, entity : 'employee', values: { name: "John Bonham"} }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                assert.equal(m.status, "Created");
+                assert.equal(m.entity, "expenses.Employee");
             }).then(done, done);
         });
         
@@ -142,7 +151,7 @@ suite('EBUI', function() {
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal("Updated", m.status);
+                assert.equal(m.status, "Updated");
             }).then(done, done);
         });
         
@@ -150,9 +159,9 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : "unknown-app", entity : "namespace.Entity", values: { } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                assert.equal("Failure", m.status);
+                assert.equal(m.status, "Failure");
                 assert.ok(m.error);
-                assert.equal("Project not found: unknown-app", m.error.message);
+                assert.equal(m.error.message, "Project not found: unknown-app");
             }).then(done, done);
         });
         
@@ -160,9 +169,9 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : kirraApplicationId, entity : "namespace.Entity", values: { } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                assert.equal("Failure", m.status);
+                assert.equal(m.status, "Failure");
                 assert.ok(m.error);
-                assert.equal("Unknown entity: Entity on namespace: namespace", m.error.message);
+                assert.equal(m.error.message, "Entity not found: namespace.Entity");
             }).then(done, done);
         });
 
@@ -170,9 +179,9 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : kirraApplicationId, entity : "expenses.Employee", objectId: "-1", values: { name: "Some Name" } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                assert.equal("Failure", m.status);
+                assert.equal(m.status, "Failure");
                 assert.ok(m.error);
-                assert.equal("Instance not found", m.error.message);
+                assert.equal(m.error.message, "Instance not found");
             }).then(done, done);
         });
 
@@ -185,9 +194,9 @@ suite('EBUI', function() {
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal("Failure", m.status);
+                assert.equal(m.status, "Failure");
                 assert.ok(m.error);
-                assert.equal("A value is required for Name", m.error.message);
+                assert.equal(m.error.message, "A value is required for Name");
             }).then(done, done);
         });
 
@@ -197,9 +206,9 @@ suite('EBUI', function() {
                 text: 'This is a message'
             };
             messageProcessor.parseMessage(message);
-            assert.equal("myapplication", message.application);
-            assert.equal("namespace.Entity", message.entity);
-            assert.equal(undefined, message.objectId);
+            assert.equal(message.application, "myapplication");
+            assert.equal(message.entity, "namespace.Entity");
+            assert.equal(message.objectId, undefined);
         });
         
         test('parseMessage - instance account', function() {
@@ -208,9 +217,9 @@ suite('EBUI', function() {
                 text: 'This is a message'
             };
             messageProcessor.parseMessage(message);
-            assert.equal("myapplication", message.application);
-            assert.equal("namespace.Entity", message.entity);
-            assert.equal('1234', message.objectId);
+            assert.equal(message.application, "myapplication");
+            assert.equal(message.entity, "namespace.Entity");
+            assert.equal(message.objectId, '1234');
         });
         
         test('parseMessage - values', function() {
@@ -221,9 +230,9 @@ suite('EBUI', function() {
             };
             messageProcessor.parseMessage(message);
             assert.ok(message.values);
-            assert.equal("value1", message.values.Field1);
-            assert.equal("value2", message.values.Field2);
-            assert.equal("Line 1\nLine 2\n", message.comment);
+            assert.equal(message.values.Field1, "value1");
+            assert.equal(message.values.Field2, "value2");
+            assert.equal(message.comment, "Line 1\nLine 2\n");
         });
         
         test('parseMessage - values mixed with comment', function() {
@@ -234,9 +243,9 @@ suite('EBUI', function() {
             };
             messageProcessor.parseMessage(message);
             assert.ok(message.values);
-            assert.equal("value1", message.values.Field1);
-            assert.equal("value2", message.values.Field2);
-            assert.equal("Line 1\nLine 2\nLine 3\nLine 4\n", message.comment);            
+            assert.equal(message.values.Field1, "value1");
+            assert.equal(message.values.Field2, "value2");
+            assert.equal(message.comment, "Line 1\nLine 2\nLine 3\nLine 4\n");            
         });
     });
 });

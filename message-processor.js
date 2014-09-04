@@ -66,6 +66,10 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
         return messageStore.saveMessage(message).then(function () {
             return kirraApp.getApplication();
         }).then(function () {
+            return kirraApp.getEntity(message.entity);
+        }).then(function (entity) {
+            // it is possible the entity was losely named, force a precise entity name
+            message.entity = entity.fullName;
             if (message.objectId) {
                 return self.processUpdateMessage(kirraApp, message);
             } else {

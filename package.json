@@ -26,7 +26,8 @@
     "mongodb": "*",
     "monk": "*",
     "js-yaml": "*",
-    "q": "1.0.1"
+    "q": "1.0.1",
+    "array.prototype.find": "1.0.0"
   },
   "devDependencies": {
      "mocha": "*"

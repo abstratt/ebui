@@ -1,7 +1,7 @@
 var http = require("http");
 var url = require("url");
 var q = require('q');
-
+require('array.prototype.find');
 var ebuiUtil = require("./util.js");
 
 var assert = ebuiUtil.assert;
@@ -27,12 +27,13 @@ var Kirra = function (baseUrl, application) {
         };
         var deferred = q.defer();
         var req = http.request(options, function(res) {
-            res.on('data', function(d) {
-                var parsed = JSON.parse(d);
-                if (
-                    (typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
-                    (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)
-                ) {
+            var data = "";
+            res.on('data', function(chunk) {
+                data += chunk.toString();
+            }).on('end', function() {
+                var parsed = JSON.parse(data);
+                if ((typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
+                    (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)) {
                     deferred.reject(parsed);
                 } else {
                     deferred.resolve(parsed);
@@ -69,6 +70,18 @@ var Kirra = function (baseUrl, application) {
 
     self.getApplication = function() {
         return self.performRequest('', undefined, 200);
+    };
+    
+    self.getEntity = function(entity) {
+        return self.performRequest('/entities/', undefined, 200).then(function (entities) {
+            var found = entities.find(function (it) { 
+                return it.fullName.toUpperCase() === entity.toUpperCase() || it.label.toUpperCase() === entity.toUpperCase(); 
+            });
+            if (found) {
+                return found;
+            }
+            throw new Error("Entity not found: " + entity);
+        });
     };
 
     self.getInstance = function(message) {
