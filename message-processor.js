@@ -73,15 +73,33 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
             // it is possible the fields were loosely named, replace with precisely named fields
             var properName = undefined;
             if (message.values) {
-                var newValues = {};
-                for (var key in message.values) {
-                    for (var property in entity.properties) {
+                var values = {};
+                var links = {};
+                var invocations = {};
+                message_values: for (var key in message.values) {
+                    entity_properties: for (var property in entity.properties) {
                         if (entity.properties[property].name.toUpperCase() === key.toUpperCase() || entity.properties[property].label.toUpperCase() === key.toUpperCase()) {
-                            newValues[entity.properties[property].name] = message.values[key];
+                            values[entity.properties[property].name] = message.values[key];
+                            continue message_values;
+                        }
+                    }
+                    entity_relationships: for (var relationship in entity.relationships) {
+                        if (entity.relationships[relationship].name.toUpperCase() === key.toUpperCase() || entity.relationships[relationship].label.toUpperCase() === key.toUpperCase()) {
+                            links[entity.relationships[relationship].name] = message.values[key];
+                            continue message_values;
+                        }
+                    }
+                    entity_actions: for (var o in entity.operations) {
+                        var operation = entity.operations[o];
+                        if (operation.name.toUpperCase() === key.toUpperCase() || operation.label.toUpperCase() === key.toUpperCase()) {
+                            invocations[operation.name] = message.values[key];
+                            continue message_values;
                         }
                     }
                 }
-                message.values = newValues;
+                message.values = values;                
+                message.links = links;
+                message.invocations = invocations;
             }
             if (message.objectId) {
                 return self.processUpdateMessage(kirraApp, message);
@@ -100,6 +118,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
     self.processCreationMessage = function(kirraApp, message) {
         return kirraApp.createInstance(message).then(function (d) {
             message.objectId = d.objectId;	
+            message.values = d.values;
             message.status = "Created";
             self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
             self.messageStore.saveMessage(message).then(function() { return d; });
@@ -108,8 +127,11 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
 
     self.processUpdateMessage = function(kirraApp, message) {
         return kirraApp.updateInstance(message).then(function (d) {
+            return d;
+        }).then(function (d) {
 	        self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
 	        message.status = "Updated";
+            message.values = d.values;
 	        return self.messageStore.saveMessage(message).then(function() { return d; });
         }, self.onError(message, "Error processing your message, object not updated."));
     };

@@ -6,7 +6,7 @@ var ebuiUtil = require("./util.js");
 
 var assert = ebuiUtil.assert;
 var merge = ebuiUtil.merge;
-
+var util = require('util');
 var Kirra = function (baseUrl, application) {
     var self = this;
     
@@ -34,6 +34,7 @@ var Kirra = function (baseUrl, application) {
                 var parsed = JSON.parse(data);
                 if ((typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
                     (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)) {
+                    console.error("Error response: ", util.inspect(parsed));
                     deferred.reject(parsed);
                 } else {
                     deferred.resolve(parsed);
@@ -53,8 +54,9 @@ var Kirra = function (baseUrl, application) {
     self.createInstance = function(message) {
         return self.getInstanceTemplate(message).then(function (template) {
 		    var mergedValues = merge(merge({}, message.values), template.values);
+		    var mergedLinks = merge(merge({}, message.links), template.links);
             return self.performRequest('/entities/' + message.entity + '/instances/', 'POST', [201, 200], 
-                { values: mergedValues }
+                { values: mergedValues, links: mergedLinks }
             );
 	    });
     };
@@ -62,8 +64,9 @@ var Kirra = function (baseUrl, application) {
     self.updateInstance = function(message) {
         return self.getInstance(message).then(function (existing) {
 		    var mergedValues = merge(merge({}, message.values), existing.values);
+		    var mergedLinks = merge(merge({}, message.links), existing.links);
 		    return self.performRequest('/entities/' + message.entity + '/instances/' + message.objectId, 'PUT', 200, 
-		        { values: mergedValues }
+		        { values: mergedValues, links: mergedLinks }
 	        );
 	    });
     };

@@ -1,16 +1,18 @@
-var util = require("util");
 var Kirra = require("./kirra-client.js");
 var MessageProcessor = require("./message-processor.js");
 var MessageStore = require("./message-store.js");
 var MandrillGateway = require("./mandrill-gateway.js");
+var ebuiUtil = require("./util.js");
+var assert = ebuiUtil.assert;
+var merge = ebuiUtil.merge;
 
 var assert = require("assert");
 var kirraApplicationId = 'demo-cloudfier-examples-expenses';
 var kirraEntity = 'expenses.Employee';
 
 suite('EBUI', function() {
-    var kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
-    var kirra = new Kirra(kirraBaseUrl, kirraApplicationId);
+    var kirraBaseUri = process.env.KIRRA_API_URI || "http://develop.cloudfier.com/services/api-v2/";
+    var kirra = new Kirra(kirraBaseUri, kirraApplicationId);
     this.timeout(10000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
@@ -26,24 +28,63 @@ suite('EBUI', function() {
             }).then(done, done);
         });
 
-        var objectId;
+        var created;
         test('createInstance', function(done) {
             kirra.createInstance({
                 entity: 'expenses.Employee', 
                 values: { name: "John Doe" }
             }).then(function(instance) {
-                objectId = instance.objectId; 
-                assert.equal("John Doe", instance.values.name); 
+                created = instance; 
+                assert.equal(instance.values.name, "John Doe"); 
             }).then(done, done);
         });
         
         test('updateInstance', function(done) {
             kirra.updateInstance({
                 entity: 'expenses.Employee', 
-                objectId: objectId,
+                objectId: created.objectId,
                 values: { name: "John Moe" }
             }).then(function(instance) {
-                assert.equal("John Moe", instance.values.name); 
+                assert.equal(instance.values.name, "John Moe"); 
+            }).then(done, done);
+        });
+        
+        test('createComplexInstance', function(done) {
+            var category, employee, expense;
+            kirra.createInstance({
+                entity: 'expenses.Category', 
+                values: { name: "Totally different category" }
+            }).then(function(instance) {
+                category = instance;
+                return kirra.createInstance({
+                    entity: 'expenses.Employee', 
+                    values: { name: "A new employee" }
+                });
+            }).then(function(instance) {
+                employee = instance;
+                var values = {
+                    description: "Trip to Timbuktu", 
+                    amount: 205.45, 
+                    date: "2014-09-21", 
+                };
+                var links = {
+                    category: [{ uri: category.uri }],
+                    employee: [{ uri: employee.uri }], 
+                };
+                return kirra.createInstance({
+                    entity: 'expenses.Expense', 
+                    values: values,
+                    links: links
+                });
+            }).then(function(instance) {
+                expense = instance; 
+                assert.equal(instance.values.description, "Trip to Timbuktu"); 
+                assert.ok(instance.links.category);
+                assert.equal(instance.links.category.length, 1);
+                assert.equal(instance.links.category[0].uri, category.uri);
+                assert.ok(instance.links.employee);
+                assert.equal(instance.links.employee.length, 1);                
+                assert.equal(instance.links.employee[0].uri, employee.uri);
             }).then(done, done);
         });
     });
@@ -110,7 +151,7 @@ suite('EBUI', function() {
 
     suite('MessageProcessor', function() {
     
-        var messageProcessor = new MessageProcessor(emailGateway, messageStore, kirraBaseUrl);
+        var messageProcessor = new MessageProcessor(emailGateway, messageStore, kirraBaseUri);
         
         test('makeEmailForInstance', function(){
             assert.equal("expenses_Employee-2.myapp@inbox.cloudfier.com", messageProcessor.makeEmailForInstance({entity: 'expenses.Employee', application: 'myapp', objectId: 2}));
@@ -129,6 +170,48 @@ suite('EBUI', function() {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Created");
+                assert.equal(m.values.totalSubmitted, 0);
+            }).then(done, done);
+        });
+        
+        test('processPendingMessage - creation of complex instance', function(done) {
+            var category, employee, expense;
+            kirra.createInstance({
+                entity: 'expenses.Category', 
+                values: { name: "Totally different category" }
+            }).then(function(instance) {
+                category = instance;
+                return kirra.createInstance({
+                    entity: 'expenses.Employee', 
+                    values: { name: "A new employee" }
+                });
+            }).then(function(instance) {
+                employee = instance;
+                var values = {
+                    description: "Trip to Timbuktu", 
+                    amount: 205.45, 
+                    date: "2014-09-21", 
+                };
+                var links = {
+                    category: [{ uri: category.uri }],
+                    employee: [{ uri: employee.uri }], 
+                };
+                return messageStore.saveMessage({
+                    application : kirraApplicationId,
+                    entity: 'expenses.Expense', 
+                    values: merge(values, links)
+                });                    
+            }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                assert.equal(m.status, "Created");
+                assert.equal(m.values.description, "Trip to Timbuktu"); 
+                assert.ok(m.links.category);
+                assert.equal(m.links.category.length, 1);
+                assert.equal(m.links.category[0].uri, category.uri);
+                assert.ok(m.links.employee);
+                assert.equal(m.links.employee.length, 1);                
+                assert.equal(m.links.employee[0].uri, employee.uri);
             }).then(done, done);
         });
         
@@ -152,6 +235,23 @@ suite('EBUI', function() {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Updated");
+            }).then(done, done);
+        });
+        
+        test('processPendingMessage - action', function(done) {
+            kirra.createInstance({
+                entity: 'expenses.Employee', 
+                values: { name: "Martha Rhodes" }
+            }).then(function(instance) {
+                var values = { declareExpense: { description: "Trip to Timbuktu", amount: 205.45, date: "2014-09-21", category: "Travel" }  };
+                var message = { objectId: instance.objectId, application : kirraApplicationId, entity : kirraEntity, values: values };
+                return messageStore.saveMessage(message).then(function() { return message; });
+            }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                assert.ok(m.invocations);
+                assert.ok(m.invocations.declareExpense);
+                assert.equal(m.invocations.declareExpense.description, "Trip to Timbuktu");
             }).then(done, done);
         });
         
@@ -265,5 +365,19 @@ suite('EBUI', function() {
             assert.equal(message.values.Field2, "value2");
             assert.equal(message.comment, "Line 1\nLine 2\nLine 3\nLine 4\n");            
         });
+        
+        test('parseMessage - nested values', function() {
+            var message = { 
+                account : 'namespace_Entity-myapplication@domain',
+                subject: 'subject',
+                text: 'Line 1\nLine 2\n--\ndeclareExpense:\n  param1: value1\n  param2: value2\n'
+            };
+            messageProcessor.parseMessage(message);
+            assert.ok(message.values);
+            assert.ok(message.values.declareExpense);
+            assert.equal(message.values.declareExpense.param1, 'value1');            
+            assert.equal(message.values.declareExpense.param2, 'value2');                        
+        });
+   
     });
 });

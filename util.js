@@ -14,5 +14,14 @@ exports.merge = function (obj1, obj2) {
     return obj1;
 };
 
+exports.isMatchFor = function(name, object, properties) {
+    for (var p in properties) {
+        if (object[p] && (name.toUpperCase() === object[p].toUpperCase())) {
+            return true;
+        }
+    }
+    return false;
+};
+
 
 
