@@ -147,7 +147,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             message.status = "Created";
             self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }) +
                 "Use the URL below to access this object:\n\n" +
-                self.kirraBaseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
+                kirraBaseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
                 message.application + encodeURIComponent('/entities/' + message.entity + '/instances/' + message.objectId), self.makeEmailForInstance(message));
             self.messageStore.saveMessage(message).then(function() { return d; });
         }, self.onError(message, "Error processing your message, object not created."));
