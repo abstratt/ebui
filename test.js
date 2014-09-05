@@ -11,9 +11,10 @@ var kirraApplicationId = 'demo-cloudfier-examples-expenses';
 var kirraEntity = 'expenses.Employee';
 
 suite('EBUI', function() {
-    var kirraBaseUri = process.env.KIRRA_API_URI || "http://develop.cloudfier.com/services/api-v2/";
-    var kirra = new Kirra(kirraBaseUri, kirraApplicationId);
-    this.timeout(10000);
+    var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
+    var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
+    var kirra = new Kirra(kirraApiUrl, kirraApplicationId);
+    this.timeout(20000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, errorMessage) { 
@@ -166,7 +167,7 @@ suite('EBUI', function() {
 
     suite('MessageProcessor', function() {
     
-        var messageProcessor = new MessageProcessor(emailGateway, messageStore, kirraBaseUri);
+        var messageProcessor = new MessageProcessor(emailGateway, messageStore, kirraBaseUrl, kirraApiUrl);
         
         test('makeEmailForInstance', function(){
             assert.equal("expenses_Employee-2.myapp@inbox.cloudfier.com", messageProcessor.makeEmailForInstance({entity: 'expenses.Employee', application: 'myapp', objectId: 2}));

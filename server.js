@@ -40,10 +40,12 @@ var EBUIApp = function() {
         self.fromEmail = process.env.FROM_EMAIL || 'support@cloudfier.com';  
         self.fromName = process.env.FROM_NAME || 'Cloudfier Support';
         self.baseUrl = process.env.BASE_URL || ("http://" + self.ipaddress + "/");
-        self.kirraBaseUrl = process.env.KIRRA_API_URL || "http://develop.cloudfier.com/services/api-v2/";
+        self.kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
+        self.kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
 
         console.log("base url: \"" + self.baseUrl + '"');
-        console.log("Kirra API url: \"" + self.kirraBaseUrl + '"');
+        console.log("Kirra Base url: \"" + self.kirraBaseUrl + '"');
+        console.log("Kirra API url: \"" + self.kirraApiUrl + '"');
         console.log("fromEmail: \"" + self.fromEmail + '"');
         console.log("fromName: \"" + self.fromName + '"');
     };
@@ -131,7 +133,7 @@ var EBUIApp = function() {
 
         self.messageStore = new MessageStore(self.dbhost, self.dbport, self.dbname, self.dbusername, self.dbpassword);        
         self.mandrillGateway = new MandrillGateway(self.mandrillKey, self.fromEmail, self.fromName);
-        self.messageProcessor = new MessageProcessor(self.mandrillGateway, self.messageStore, self.kirraBaseUrl);
+        self.messageProcessor = new MessageProcessor(self.mandrillGateway, self.messageStore, self.kirraBaseUrl, self.kirraApiUrl);
 
         // Create the express server and routes.
         self.initializeServer();

@@ -10,12 +10,13 @@ var ebuiUtil = require("./util.js");
 var assert = ebuiUtil.assert;
 var merge = ebuiUtil.merge;
 
-var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
+var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirraApiUrl) {
     var self = this;
     
     assert(emailGateway, "emailGateway missing");
     assert(messageStore, "messageStore missing");
     assert(kirraBaseUrl, "kirraBaseUrl missing");
+    assert(kirraApiUrl, "kirraApiUrl missing");
     
     self.messageStore = messageStore;
     self.emailGateway = emailGateway;
@@ -64,7 +65,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
             emailGateway.replyToSender(message, "Unfortunately, your message could not be processed.");
             return messageStore.saveMessage(message).then(function() { return message; });    
         }
-        var kirraApp = new Kirra(kirraBaseUrl, message.application);
+        var kirraApp = new Kirra(kirraApiUrl, message.application);
         message.status = 'Processing';
         return messageStore.saveMessage(message).then(function () {
             return kirraApp.getApplication();
@@ -144,7 +145,10 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
             message.objectId = d.objectId;	
             message.values = d.values;
             message.status = "Created";
-            self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
+            self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }) +
+                "Use the URL below to access this object:\n\n" +
+                self.kirraBaseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
+                message.application + encodeURIComponent('/entities/' + message.entity + '/instances/' + message.objectId), self.makeEmailForInstance(message));
             self.messageStore.saveMessage(message).then(function() { return d; });
         }, self.onError(message, "Error processing your message, object not created."));
     };
