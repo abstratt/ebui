@@ -48,6 +48,21 @@ suite('EBUI', function() {
                 assert.equal(instance.values.name, "John Moe"); 
             }).then(done, done);
         });
+
+        test('getInstances', function(done) {
+            var suffix = Math.random();
+            kirra.createInstance({
+                entity: 'expenses.Employee', 
+                values: { name: "John Doe" + suffix }
+            }).then(function(instance) {
+                created = instance;
+                return kirra.getInstances('expenses.Employee', { name: created.values.name });
+            }).then(function(instances) {
+                assert.equal(instances.contents.length, 1);
+                assert.equal(instances.contents[0].uri, created.uri); 
+            }).then(done, done);
+        });
+        
         
         test('createComplexInstance', function(done) {
             var category, employee, expense;
@@ -65,7 +80,7 @@ suite('EBUI', function() {
                 var values = {
                     description: "Trip to Timbuktu", 
                     amount: 205.45, 
-                    date: "2014-09-21", 
+                    date: "2014/09/21", 
                 };
                 var links = {
                     category: [{ uri: category.uri }],
@@ -162,7 +177,7 @@ suite('EBUI', function() {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Invalid");
-            }).then(done).end();
+            }).then(done, done);
         });
         
         test('processPendingMessage - creation', function(done) {
@@ -174,38 +189,59 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
+        /*
+        test('resolveLinks', function(done) {
+            var self = this;
+            var category;
+            kirra.createInstance({
+                entity: 'expenses.Category', 
+                values: { name: "Category for " + self.title }
+            }).then(function(instance) {
+                category = instance;
+                assert.ok(category.uri);
+                return messageProcessor.resolveLinks(kirra, {
+                    entity: 'expenses.Expense', 
+                    links: { category: { data : [ category.values.name ], type: { } }
+                });
+            }).then(function(resolvedMessage) {
+                assert.ok(resolvedMessage);
+                assert.ok(resolvedMessage.links);
+                assert.ok(resolvedMessage.links.category);
+                assert.equal(resolvedMessage.links.category[0].uri, category.uri);
+            }).then(done, done);
+        });
+*/
+
         test('processPendingMessage - creation of complex instance', function(done) {
             var category, employee, expense;
             kirra.createInstance({
                 entity: 'expenses.Category', 
-                values: { name: "Totally different category" }
+                values: { name: "Totally different category" + Math.random() }
             }).then(function(instance) {
                 category = instance;
                 return kirra.createInstance({
                     entity: 'expenses.Employee', 
-                    values: { name: "A new employee" }
+                    values: { name: "A new employee" + Math.random() }
                 });
             }).then(function(instance) {
                 employee = instance;
                 var values = {
                     description: "Trip to Timbuktu", 
                     amount: 205.45, 
-                    date: "2014-09-21", 
-                };
-                var links = {
-                    category: [{ uri: category.uri }],
-                    employee: [{ uri: employee.uri }], 
+                    date: "2014/09/21", 
+                    category: category.values.name,
+                    employee: employee.values.name 
                 };
                 return messageStore.saveMessage({
                     application : kirraApplicationId,
                     entity: 'expenses.Expense', 
-                    values: merge(values, links)
+                    values: values
                 });                    
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Created");
-                assert.equal(m.values.description, "Trip to Timbuktu"); 
+                assert.equal(m.values.description, "Trip to Timbuktu");
                 assert.ok(m.links.category);
                 assert.equal(m.links.category.length, 1);
                 assert.equal(m.links.category[0].uri, category.uri);
@@ -243,7 +279,7 @@ suite('EBUI', function() {
                 entity: 'expenses.Employee', 
                 values: { name: "Martha Rhodes" }
             }).then(function(instance) {
-                var values = { declareExpense: { description: "Trip to Timbuktu", amount: 205.45, date: "2014-09-21", category: "Travel" }  };
+                var values = { declareExpense: { description: "Trip to Timbuktu", amount: 205.45, date: "2014/09/21", category: "Travel" }  };
                 var message = { objectId: instance.objectId, application : kirraApplicationId, entity : kirraEntity, values: values };
                 return messageStore.saveMessage(message).then(function() { return message; });
             }).then(function (m) {

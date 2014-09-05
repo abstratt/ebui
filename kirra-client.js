@@ -75,6 +75,10 @@ var Kirra = function (baseUrl, application) {
         return self.performRequest('', undefined, 200);
     };
     
+    self.getExactEntity = function(entity) {
+        return self.performRequest('/entities/' + entity, undefined, 200);
+    };
+    
     self.getEntity = function(entity) {
         return self.performRequest('/entities/', undefined, 200).then(function (entities) {
             var found = entities.find(function (it) { 
@@ -89,6 +93,18 @@ var Kirra = function (baseUrl, application) {
 
     self.getInstance = function(message) {
         return self.performRequest('/entities/' + message.entity + '/instances/' + message.objectId, undefined, 200);
+    };
+
+    self.getInstances = function(entity, filter) {
+        var filterQuery = "?";
+        if (filter) {
+            var terms = [];
+            for (var p in filter) {
+                terms.push(p + "=" + encodeURIComponent(filter[p]));    
+            }
+            filterQuery += terms.join("&");
+        }
+        return self.performRequest('/entities/' + entity + '/instances/' + filterQuery, undefined, 200);
     };
 
     self.getInstanceTemplate = function(message) {

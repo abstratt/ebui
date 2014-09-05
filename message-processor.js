@@ -1,3 +1,6 @@
+var q = require('q');
+var util = require('util');
+
 var yaml = require("js-yaml");
 var url = require("url");
 
@@ -68,6 +71,8 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
         }).then(function () {
             return kirraApp.getEntity(message.entity);
         }).then(function (entity) {
+            var deferred = q.defer();
+            var promise = deferred.promise;
             // it is possible the entity was loosely named, force a precise entity name
             message.entity = entity.fullName;
             // it is possible the fields were loosely named, replace with precisely named fields
@@ -75,6 +80,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
             if (message.values) {
                 var values = {};
                 var links = {};
+                var linksToResolve = [];
                 var invocations = {};
                 message_values: for (var key in message.values) {
                     entity_properties: for (var property in entity.properties) {
@@ -83,11 +89,25 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
                             continue message_values;
                         }
                     }
-                    entity_relationships: for (var relationship in entity.relationships) {
-                        if (entity.relationships[relationship].name.toUpperCase() === key.toUpperCase() || entity.relationships[relationship].label.toUpperCase() === key.toUpperCase()) {
-                            links[entity.relationships[relationship].name] = message.values[key];
+                    entity_relationships: for (var r in entity.relationships) {
+                        if (entity.relationships[r].name.toUpperCase() === key.toUpperCase() || entity.relationships[r].label.toUpperCase() === key.toUpperCase()) {
+                            linksToResolve.push({
+                                relationship: entity.relationships[r], 
+                                value: message.values[key]
+                            });
+                            promise = promise.then(function () {
+                                var toResolve = linksToResolve.shift();
+                                return kirraApp.getExactEntity(toResolve.relationship.typeRef.fullName).then(function (entity) {
+                                    var filter = {};
+                                    filter[entity.properties[Object.keys(entity.properties)[0]].name] = toResolve.value; 
+                                    return kirraApp.getInstances(toResolve.relationship.typeRef.fullName, filter).then(function(instances) {
+                                        links[toResolve.relationship.name] = instances.contents;
+                                    });
+                                });
+                            });
                             continue message_values;
                         }
+                        
                     }
                     entity_actions: for (var o in entity.operations) {
                         var operation = entity.operations[o];
@@ -101,6 +121,11 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
                 message.links = links;
                 message.invocations = invocations;
             }
+            deferred.resolve(message);
+            return promise.then(function () {
+                return message; 
+            });
+        }).then(function(message) {    
             if (message.objectId) {
                 return self.processUpdateMessage(kirraApp, message);
             } else {
@@ -109,12 +134,11 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
         }, self.onError(message, "Invalid application")).then(
             function() { return message; }
         );
-    };
-    
+    };    
     self.makeEmailForInstance = function(message) {
         return message.entity.replace('.', '_') + '-' + message.objectId + '.' + message.application + '@inbox.cloudfier.com';
     };
-
+    
     self.processCreationMessage = function(kirraApp, message) {
         return kirraApp.createInstance(message).then(function (d) {
             message.objectId = d.objectId;	
@@ -142,6 +166,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl) {
     
     self.onError = function(message, errorMessage) {
 	    return function (e) {
+	        console.error(e);
 		    message.status = "Failure";
 		    message.error = e;
 		    messageStore.saveMessage(message);
