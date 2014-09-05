@@ -41,7 +41,7 @@ var EBUIApp = function() {
         self.fromName = process.env.FROM_NAME || 'Cloudfier Support';
         self.baseUrl = process.env.BASE_URL || ("http://" + self.ipaddress + "/");
         self.kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
-        self.kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
+        self.kirraApiUrl = process.env.KIRRA_API_URL || (self.kirraBaseUrl + "services/api-v2/");
 
         console.log("base url: \"" + self.baseUrl + '"');
         console.log("Kirra Base url: \"" + self.kirraBaseUrl + '"');
