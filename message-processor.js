@@ -141,31 +141,35 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
     };
     
     self.processCreationMessage = function(kirraApp, message) {
-        return kirraApp.createInstance(message).then(function (d) {
-            message.objectId = d.objectId;	
-            message.values = d.values;
+        return kirraApp.createInstance(message).then(function (instance) {
+            message.objectId = instance.objectId;	
+            message.values = instance.values;
+            message.links = instance.links;
             message.status = "Created";
-            self.replyToSender(message, "Message successfully processed. Object was created.\n" + yaml.safeDump(d.values, { skipInvalid: true }) +
-                "Use the URL below to access this object:\n\n" +
-                kirraBaseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
-                message.application + encodeURIComponent('/entities/' + message.entity + '/instances/' + message.objectId), self.makeEmailForInstance(message));
-            self.messageStore.saveMessage(message).then(function() { return d; });
+	        self.sendMessageWithLink(message, instance, "Message successfully processed. Object was created.");
+            self.messageStore.saveMessage(message).then(function() { return instance; });
         }, self.onError(message, "Error processing your message, object not created."));
     };
 
     self.processUpdateMessage = function(kirraApp, message) {
-        return kirraApp.updateInstance(message).then(function (d) {
-            return d;
-        }).then(function (d) {
-	        self.replyToSender(message, "Message successfully processed. Object was updated.\n" + yaml.safeDump(d.values, { skipInvalid: true }), self.makeEmailForInstance(message));
+        return kirraApp.updateInstance(message).then(function (instance) {
+	        self.sendMessageWithLink(message, instance, "Message successfully processed. Object was updated.");
 	        message.status = "Updated";
-            message.values = d.values;
-	        return self.messageStore.saveMessage(message).then(function() { return d; });
+            message.values = instance.values;
+            message.links = instance.links;
+	        return self.messageStore.saveMessage(message).then(function() { return instance; });
         }, self.onError(message, "Error processing your message, object not updated."));
     };
     
     self.replyToSender = function(message, body, senderEmail) {
         emailGateway.replyToSender(message, body, senderEmail);
+    };
+    
+    self.sendMessageWithLink = function(message, instance, userMessage) {
+        self.replyToSender(message, userMessage + "\n" + yaml.safeDump(instance.values, { skipInvalid: true }) +
+            "Use the URL below to access this object:\n\n" +
+            kirraBaseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
+            message.application + '#' + encodeURIComponent('/entities/' + message.entity + '/instances/' + message.objectId), self.makeEmailForInstance(message));
     };
     
     self.onError = function(message, errorMessage) {
