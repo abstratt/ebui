@@ -1,3 +1,4 @@
+require('array.prototype.find');
 var q = require('q');
 var util = require('util');
 
@@ -57,6 +58,16 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         return message;
 
     };
+    
+    self.resolveLooseReference = function(kirraApp, entityName, value, context) {
+        return kirraApp.getExactEntity(entityName).then(function (entity) {
+            var filter = {};
+            filter[entity.properties[Object.keys(entity.properties)[0]].name] = value; 
+            return kirraApp.getInstances(entityName, filter).then(function(instances) { 
+                return { matching: instances.contents, context: context }; 
+            });
+        });
+    };
 
     self.processPendingMessage = function (message) {
         self.parseMessage(message);
@@ -81,8 +92,8 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             if (message.values) {
                 var values = {};
                 var links = {};
-                var linksToResolve = [];
-                var invocations = {};
+                var invocations = [];
+                var linkResolvers = [], argumentResolvers = [];                
                 message_values: for (var key in message.values) {
                     entity_properties: for (var property in entity.properties) {
                         if (entity.properties[property].name.toUpperCase() === key.toUpperCase() || entity.properties[property].label.toUpperCase() === key.toUpperCase()) {
@@ -92,28 +103,42 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                     }
                     entity_relationships: for (var r in entity.relationships) {
                         if (entity.relationships[r].name.toUpperCase() === key.toUpperCase() || entity.relationships[r].label.toUpperCase() === key.toUpperCase()) {
-                            linksToResolve.push({
-                                relationship: entity.relationships[r], 
-                                value: message.values[key]
-                            });
+                            linkResolvers.push(self.resolveLooseReference(
+                                    kirraApp,
+                                    entity.relationships[r].typeRef.fullName,
+                                    message.values[key],
+                                    entity.relationships[r]
+                                ));
                             promise = promise.then(function () {
-                                var toResolve = linksToResolve.shift();
-                                return kirraApp.getExactEntity(toResolve.relationship.typeRef.fullName).then(function (entity) {
-                                    var filter = {};
-                                    filter[entity.properties[Object.keys(entity.properties)[0]].name] = toResolve.value; 
-                                    return kirraApp.getInstances(toResolve.relationship.typeRef.fullName, filter).then(function(instances) {
-                                        links[toResolve.relationship.name] = instances.contents;
-                                    });
+                                return linkResolvers.shift().then(function(result) {
+                                    links[result.context.name] = [{ uri: result.matching[0].uri }];
                                 });
                             });
                             continue message_values;
                         }
-                        
                     }
                     entity_actions: for (var o in entity.operations) {
                         var operation = entity.operations[o];
                         if (operation.name.toUpperCase() === key.toUpperCase() || operation.label.toUpperCase() === key.toUpperCase()) {
-                            invocations[operation.name] = message.values[key];
+                            var operationArguments = message.values[key];
+                            invocations.push({ operation: operation, arguments: operationArguments });
+                            for (var a in operationArguments) {
+                                var parameter = operation.parameters.find(function (p) { return p.name === a });
+                                if (parameter && parameter.typeRef.kind === 'Entity') {
+                                    argumentResolvers.push(self.resolveLooseReference(
+                                        kirraApp,
+                                        parameter.typeRef.fullName,
+                                        operationArguments[a],
+                                        // context needs two coordinates - the invocation, and the argument name
+                                        { invocationIndex: invocations.length - 1, argumentName: a }
+                                    ));
+                                    promise = promise.then(function () {
+                                        return argumentResolvers.shift().then(function(result) {
+                                            invocations[result.context.invocationIndex].arguments[result.context.argumentName] = { uri: result.matching[0].uri };
+                                        });
+                                    });
+                                }
+                            }
                             continue message_values;
                         }
                     }
@@ -124,7 +149,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             }
             deferred.resolve(message);
             return promise.then(function () {
-                return message; 
+                return messageStore.saveMessage(message); 
             });
         }).then(function(message) {    
             if (message.objectId) {
@@ -132,22 +157,39 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             } else {
                 return self.processCreationMessage(kirraApp, message);
             }
+        }).then(function(message) {
+            if (message.invocations.length === 0) {
+                return message;
+            }
+            message.invocationsAttempted = [];
+            message.invocationsCompleted = [];            
+            
+            var nextToInvoke = message.invocations.shift();
+            message.invocationsAttempted.unshift(nextToInvoke);
+            return kirraApp.invokeOperation(message.objectId, nextToInvoke.operation, nextToInvoke.arguments).then(function() {
+                var justInvoked = message.invocationsAttempted.shift();
+                message.invocationsCompleted.unshift(justInvoked);                            
+                return message;
+            });
         }, self.onError(message, "Invalid application")).then(
             function() { return message; }
         );
-    };    
+    };
+    
     self.makeEmailForInstance = function(message) {
         return message.entity.replace('.', '_') + '-' + message.objectId + '.' + message.application + '@inbox.cloudfier.com';
     };
     
     self.processCreationMessage = function(kirraApp, message) {
+        var createdInstance;
         return kirraApp.createInstance(message).then(function (instance) {
+            createdInstance = instance;
             message.objectId = instance.objectId;	
             message.values = instance.values;
             message.links = instance.links;
             message.status = "Created";
 	        self.sendMessageWithLink(message, instance, "Message successfully processed. Object was created.");
-            self.messageStore.saveMessage(message).then(function() { return instance; });
+            return self.messageStore.saveMessage(message).then(function(savedMessage) { return savedMessage; });
         }, self.onError(message, "Error processing your message, object not created."));
     };
 
@@ -157,7 +199,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
 	        message.status = "Updated";
             message.values = instance.values;
             message.links = instance.links;
-	        return self.messageStore.saveMessage(message).then(function() { return instance; });
+	        return self.messageStore.saveMessage(message).then(function(updatedMessage) { return updatedMessage; });
         }, self.onError(message, "Error processing your message, object not updated."));
     };
     

@@ -2,9 +2,7 @@ var Kirra = require("./kirra-client.js");
 var MessageProcessor = require("./message-processor.js");
 var MessageStore = require("./message-store.js");
 var MandrillGateway = require("./mandrill-gateway.js");
-var ebuiUtil = require("./util.js");
-var assert = ebuiUtil.assert;
-var merge = ebuiUtil.merge;
+var util = require('util');
 
 var assert = require("assert");
 var kirraApplicationId = 'demo-cloudfier-examples-expenses';
@@ -103,7 +101,41 @@ suite('EBUI', function() {
                 assert.equal(instance.links.employee[0].uri, employee.uri);
             }).then(done, done);
         });
+        
+        test('invokeOperation', function(done) {
+            var employeeEntity;
+            var category, employee, expense;
+            kirra.createInstance({
+                entity: 'expenses.Category', 
+                values: { name: "Totally different category" }
+            }).then(function(instance) {
+                category = instance;
+                return kirra.createInstance({
+                    entity: 'expenses.Employee', 
+                    values: { name: "A new employee" }
+                });
+            }).then(function(instance) {
+                employee = instance;
+                return kirra.getExactEntity('expenses.Employee');
+            }).then(function(entity) {
+                employeeEntity = entity;                
+            }).then(function() {
+                var arguments = {
+                    description: "Trip to Timbuktu", 
+                    amount: 205.45, 
+                    date: "2014/09/21", 
+                    category: { uri: category.uri }
+                };
+                return kirra.invokeOperation(employee.objectId, employeeEntity.operations.declareExpense, arguments);
+            }).then(function(instance) {
+                return kirra.getRelatedInstances("expenses.Employee", employee.objectId, "recordedExpenses");
+            }).then(function(instances) {
+                assert.equal(instances.length, 1);                
+            }).then(done, done);
+        });
     });
+    
+    
 
     suite('MandrillGateway', function() {
         var mandrillGateway = new MandrillGateway();
@@ -145,7 +177,7 @@ suite('EBUI', function() {
     
     suite('MessageStore', function() {
         var messageDocumentId;
-        test('creation', function(done){
+        test('simple creation', function(done){
             messageStore.saveMessage({ }).then(
                 function (m) { 
                     assert.ok(m._id);
@@ -181,7 +213,7 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
-        test('processPendingMessage - creation', function(done) {
+        test('processPendingMessage - simple creation', function(done) {
             messageStore.saveMessage({ application : kirraApplicationId, entity : kirraEntity, values: { name: "John Bonham"} }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
@@ -190,29 +222,6 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
-        /*
-        test('resolveLinks', function(done) {
-            var self = this;
-            var category;
-            kirra.createInstance({
-                entity: 'expenses.Category', 
-                values: { name: "Category for " + self.title }
-            }).then(function(instance) {
-                category = instance;
-                assert.ok(category.uri);
-                return messageProcessor.resolveLinks(kirra, {
-                    entity: 'expenses.Expense', 
-                    links: { category: { data : [ category.values.name ], type: { } }
-                });
-            }).then(function(resolvedMessage) {
-                assert.ok(resolvedMessage);
-                assert.ok(resolvedMessage.links);
-                assert.ok(resolvedMessage.links.category);
-                assert.equal(resolvedMessage.links.category[0].uri, category.uri);
-            }).then(done, done);
-        });
-*/
-
         test('processPendingMessage - creation of complex instance', function(done) {
             var category, employee, expense;
             kirra.createInstance({
@@ -276,19 +285,34 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - action', function(done) {
+            var category, employee;
             kirra.createInstance({
-                entity: 'expenses.Employee', 
-                values: { name: "Martha Rhodes" }
+                entity: 'expenses.Category', 
+                values: { name: "Totally different category" + Math.random() }
             }).then(function(instance) {
-                var values = { declareExpense: { description: "Trip to Timbuktu", amount: 205.45, date: "2014/09/21", category: "Travel" }  };
+                category = instance;
+                return kirra.createInstance({
+                    entity: 'expenses.Employee', 
+                    values: { name: "Martha Rhodes" }
+                });
+            }).then(function(instance) {
+                employee = instance;
+                var values = { declareExpense: { description: "Trip to Timbuktu", amount: 205.45, date: "2014/09/21", category: category.values.name }  };
                 var message = { objectId: instance.objectId, application : kirraApplicationId, entity : kirraEntity, values: values };
                 return messageStore.saveMessage(message).then(function() { return message; });
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.ok(m.invocations);
-                assert.ok(m.invocations.declareExpense);
-                assert.equal(m.invocations.declareExpense.description, "Trip to Timbuktu");
+                assert.equal(m.invocations.length, 0);
+                assert.equal(m.invocationsAttempted.length, 0);                
+                assert.equal(m.invocationsCompleted.length, 1);                                
+                assert.equal(m.invocationsCompleted.length, 1);
+                assert.ok(m.invocationsCompleted[0].operation);
+                assert.equal(m.invocationsCompleted[0].operation.name, "declareExpense");
+                assert.equal(m.invocationsCompleted[0].arguments.description, "Trip to Timbuktu");
+                return kirra.getRelatedInstances(m.entity, m.objectId, "recordedExpenses");
+            }).then(function(instances) {
+                assert.equal(instances.length, 1);                
             }).then(done, done);
         });
         

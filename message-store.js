@@ -16,7 +16,7 @@ var MessageStore = function (dbhost, dbport, dbname, dbusername, dbpassword) {
     self.saveMessage = function(message) {
         var messages = self.db.get('messages');
         if (message._id) {
-            return messages.updateById(message._id, message);
+            return messages.updateById(message._id, message).then(function() { return message; });
         } else {
             return messages.insert(message);
         }

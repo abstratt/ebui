@@ -26,6 +26,7 @@ var Kirra = function (baseUrl, application) {
           headers: { 'content-type': 'application/json' }
         };
         var deferred = q.defer();
+//        console.error(options.method + " " + options.path + " " + JSON.stringify(body || {}));
         var req = http.request(options, function(res) {
             var data = "";
             res.on('data', function(chunk) {
@@ -34,7 +35,7 @@ var Kirra = function (baseUrl, application) {
                 var parsed = JSON.parse(data);
                 if ((typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
                     (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)) {
-                    console.error("Error response: ", util.inspect(parsed));
+//                    console.error("Error response: ", util.inspect(parsed));
                     deferred.reject(parsed);
                 } else {
                     deferred.resolve(parsed);
@@ -94,6 +95,10 @@ var Kirra = function (baseUrl, application) {
     self.getInstance = function(message) {
         return self.performRequest('/entities/' + message.entity + '/instances/' + message.objectId, undefined, 200);
     };
+    
+    self.invokeOperation = function(objectId, operation, arguments) {
+        return self.performRequest('/entities/' + operation.owner.fullName + '/instances/' + objectId + '/actions/' + operation.name, 'POST', 200, arguments);
+    };
 
     self.getInstances = function(entity, filter) {
         var filterQuery = "?";
@@ -105,6 +110,10 @@ var Kirra = function (baseUrl, application) {
             filterQuery += terms.join("&");
         }
         return self.performRequest('/entities/' + entity + '/instances/' + filterQuery, undefined, 200);
+    };
+    
+    self.getRelatedInstances = function(entity, objectId, relationship) {
+        return self.performRequest('/entities/' + entity + '/instances/' + objectId + '/relationships/recordedExpenses/', undefined, 200);
     };
 
     self.getInstanceTemplate = function(message) {
