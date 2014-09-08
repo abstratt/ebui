@@ -223,7 +223,7 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - creation of complex instance', function(done) {
-            var category, employee, expense;
+            var category, employee;
             kirra.createInstance({
                 entity: 'expenses.Category', 
                 values: { name: "Totally different category" + Math.random() }
@@ -284,7 +284,55 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
-        test('processPendingMessage - action', function(done) {
+        test('processPendingMessage - action without parameters', function(done) {
+            var category, employee, expense;
+            kirra.createInstance({
+                entity: 'expenses.Category', 
+                values: { name: "Totally different category" + Math.random() }
+            }).then(function(instance) {
+                category = instance;
+                return kirra.createInstance({
+                    entity: 'expenses.Employee', 
+                    values: { name: "A new employee" + Math.random() }
+                });
+            }).then(function(instance) {
+                employee = instance;
+                var values = {
+                    description: "Trip to Timbuktu", 
+                    amount: 205.45, 
+                    date: "2014/09/21", 
+                };
+                var links = {
+                    category: [{ uri: category.uri }],
+                    employee: [{ uri: employee.uri }], 
+                };
+                return kirra.createInstance({
+                    entity: 'expenses.Expense', 
+                    values: values,
+                    links: links
+                });            
+            }).then(function (instance) {
+                expense = instance;
+                assert.equal(expense.values.status, "Draft");    
+                var message = { objectId: expense.objectId, application : kirraApplicationId, entity : expense.typeRef.fullName, 
+                    values: { submit: undefined } };
+                return messageStore.saveMessage(message);
+            }).then(function(savedMessage) { 
+                    return messageProcessor.processPendingMessage(savedMessage);
+            }).then(function(m) {
+                assert.equal(m.invocations.length, 0);
+                assert.equal(m.invocationsAttempted.length, 0);                
+                assert.equal(m.invocationsCompleted.length, 1);                                
+                assert.equal(m.invocationsCompleted.length, 1);
+                assert.ok(m.invocationsCompleted[0].operation);
+                assert.equal(m.invocationsCompleted[0].operation.name, "submit");
+                return kirra.getInstance(m);
+            }).then(function(instance) {
+                assert.equal(instance.values.status, "Submitted");                
+            }).then(done, done);
+        });
+        
+        test('processPendingMessage - action with parameters', function(done) {
             var category, employee;
             kirra.createInstance({
                 entity: 'expenses.Category', 

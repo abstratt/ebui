@@ -166,10 +166,12 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             
             var nextToInvoke = message.invocations.shift();
             message.invocationsAttempted.unshift(nextToInvoke);
-            return kirraApp.invokeOperation(message.objectId, nextToInvoke.operation, nextToInvoke.arguments).then(function() {
+            return self.messageStore.saveMessage(message).then(function(message) {
+                return kirraApp.invokeOperation(message.objectId, nextToInvoke.operation, nextToInvoke.arguments);
+            }).then(function() {
                 var justInvoked = message.invocationsAttempted.shift();
                 message.invocationsCompleted.unshift(justInvoked);                            
-                return message;
+                return self.messageStore.saveMessage(message);
             });
         }, self.onError(message, "Invalid application")).then(
             function() { return message; }
