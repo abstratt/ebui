@@ -364,7 +364,6 @@ suite('EBUI', function() {
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                console.log(m);
                 assert.equal(Object.keys(m.error).length, 0);            
                 assert.equal(m.invocations.length, 1);
                 assert.equal(m.invocationsCompleted.length, 1);                                

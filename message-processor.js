@@ -229,7 +229,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
     
     self.onError = function(message, errorMessage) {
 	    return function (e) {
-	        //console.error(e);
+	        console.error(e);
 		    message.status = "Failure";
 		    message.error = e;
 		    message = messageStore.saveMessage(message);
