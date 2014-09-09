@@ -362,7 +362,6 @@ suite('EBUI', function() {
         
         test('processPendingMessage - two actions in a row', function(done) {
             var category, employee, expense;
-            collectedUserNotifications = [];
             kirra.createInstance({
                 entity: 'expenses.Category', 
                 values: { name: "Totally different category" + Math.random() }
@@ -403,7 +402,6 @@ suite('EBUI', function() {
                 assert.equal(m.invocationsCompleted[0].operation.name, "submit");
                 assert.ok(m.invocationsCompleted[1].operation);
                 assert.equal(m.invocationsCompleted[1].operation.name, "reject");
-                assert.equal(collectedUserNotifications.length, 3);
                 return kirra.getInstance(m);
             }).then(function(instance) {
                 assert.equal(instance.values.status, "Rejected");                
