@@ -14,11 +14,13 @@ suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
     var kirra = new Kirra(kirraApiUrl, expensesApplicationId);
-    this.timeout(20000);
+    this.timeout(99999999);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
-    var emailGateway = { replyToSender : function(message, errorMessage) { 
-        collectedUserNotifications.push({ errorMessage: errorMessage, message: message });
+    var emailGateway = { replyToSender : function(message, userFacingMessage) { 
+        var notification = { userFacingMessage: userFacingMessage, message: message };
+        console.error("Email sent: " + util.inspect(notification));
+        collectedUserNotifications.push(notification);
     } }; 
 
     suite('Kirra Client', function() {
@@ -362,6 +364,7 @@ suite('EBUI', function() {
         
         test('processPendingMessage - two actions in a row', function(done) {
             var category, employee, expense;
+            collectedUserNotifications = [];
             kirra.createInstance({
                 entity: 'expenses.Category', 
                 values: { name: "Totally different category" + Math.random() }
@@ -402,6 +405,7 @@ suite('EBUI', function() {
                 assert.equal(m.invocationsCompleted[0].operation.name, "submit");
                 assert.ok(m.invocationsCompleted[1].operation);
                 assert.equal(m.invocationsCompleted[1].operation.name, "reject");
+                assert.equal(collectedUserNotifications.length, 3);
                 return kirra.getInstance(m);
             }).then(function(instance) {
                 assert.equal(instance.values.status, "Rejected");                
@@ -466,7 +470,7 @@ suite('EBUI', function() {
                 assert.ok(m.error);
                 assert.equal(m.error.message, "Project not found: unknown-app");
                 assert.equal(collectedUserNotifications.length, 1, util.inspect(collectedUserNotifications));
-                assert.equal(collectedUserNotifications[0].errorMessage, "Invalid application. Reason: Project not found: unknown-app");
+                assert.equal(collectedUserNotifications[0].userFacingMessage, "Invalid application. Reason: Project not found: unknown-app");
                 assert.ok(m._id);                
                 assert.equal(m._id, collectedUserNotifications[0].message._id, util.inspect(collectedUserNotifications[0].message));
             }).then(done, done);

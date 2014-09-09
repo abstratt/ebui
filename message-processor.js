@@ -187,16 +187,23 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             if (!nextToInvoke) {
                 return self.messageStore.getById(messageId);
             }
+            var freshInstance;
             return kirraApp.invokeOperation(
                 objectId, nextToInvoke.operation, nextToInvoke.arguments
             ).then(function() {
+                return kirraApp.getInstance(message);
+            }).then(function(i) {
+                freshInstance = i;
+            }).then(function() {
                 return self.messageStore.getById(messageId);
-            }).then(function(message) {
-                message.invocationsCompleted.push(nextToInvoke);                            
-                kirraApp.getInstance(message).then(function(instance) {
-                    self.sendMessageWithLink(message, instance, "Message successfully processed. Action " + justInvoked.operation.label + " was invoked.");
-                });
-                return self.messageStore.saveMessage(message);
+            }).then(function(freshMessage) {
+                freshMessage.invocationsCompleted.push(nextToInvoke);
+                freshMessage.values = freshInstance.values;
+                freshMessage.links = freshInstance.links;                
+                return self.messageStore.saveMessage(freshMessage);
+            }).then(function(savedMessage) {
+                self.sendMessageWithLink(savedMessage, freshInstance, "Message successfully processed. Action " + nextToInvoke.operation.label + " was invoked.");
+                return savedMessage;
             }).then(invocationConsumer, self.onError(message, "Error processing your message, action " + nextToInvoke.operation.label + " not performed"));
         };
         message.invocationsCompleted = [];            
