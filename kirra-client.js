@@ -17,6 +17,8 @@ var Kirra = function (baseUrl, application) {
     
     self.application = application;    
     
+    self.cachedEntities = undefined;
+    
     self.performRequest = function(path, method, expectedStatus, body) {
         var parsedKirraBaseUrl = url.parse(self.baseUrl);	        
         var options = {
@@ -26,7 +28,8 @@ var Kirra = function (baseUrl, application) {
           headers: { 'content-type': 'application/json' }
         };
         var deferred = q.defer();
-        //console.error(options.method + " " + options.path + " " + JSON.stringify(body || {}));
+        console.error(options.method + " " + options.path + " " + JSON.stringify(body || {}));
+        var start = new Date().getTime()
         var req = http.request(options, function(res) {
             var data = "";
             res.on('data', function(chunk) {
@@ -38,7 +41,9 @@ var Kirra = function (baseUrl, application) {
                     //console.error("Error response: ", util.inspect(parsed));
                     deferred.reject(parsed);
                 } else {
-                    //console.error("Success response: ", util.inspect(parsed));
+                    var end = new Date().getTime()
+                    console.error("Took: ", (end - start) + "ms");                    
+                    console.error("Success response: ", util.inspect(parsed));
                     deferred.resolve(parsed);
                 }
             }).on('error', function(e) {
@@ -76,19 +81,33 @@ var Kirra = function (baseUrl, application) {
         return self.performRequest('', undefined, 200);
     };
     
-    self.getExactEntity = function(entity) {
-        return self.performRequest('/entities/' + entity, undefined, 200);
+    self.getExactEntity = function(entityName) {
+        return self.performRequest('/entities/' + entityName, undefined, 200);
+    };
+    
+    self.getEntityFromCache = function(entityName) {
+        var found = self.cachedEntities.find(function (it) { 
+            return it.fullName.toUpperCase() === entityName.toUpperCase() || it.label.toUpperCase() === entityName.toUpperCase(); 
+        });
+        if (found) {
+            return found;
+        }
+        throw new Error("Entity not found: " + entityName);
     };
     
     self.getEntity = function(entity) {
+        return self.getEntities().then(function() {
+            return self.getEntityFromCache(entity);
+        });
+    };
+    
+    self.getEntities = function() {
+        if (self.cachedEntities) {
+            return self.cachedEntities;
+        }
         return self.performRequest('/entities/', undefined, 200).then(function (entities) {
-            var found = entities.find(function (it) { 
-                return it.fullName.toUpperCase() === entity.toUpperCase() || it.label.toUpperCase() === entity.toUpperCase(); 
-            });
-            if (found) {
-                return found;
-            }
-            throw new Error("Entity not found: " + entity);
+            self.cachedEntities = entities;
+            return entities;
         });
     };
 

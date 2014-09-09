@@ -5,14 +5,14 @@ var MandrillGateway = require("./mandrill-gateway.js");
 var util = require('util');
 
 var assert = require("assert");
-var kirraApplicationId = 'demo-cloudfier-examples-expenses';
+var kirraApplicationId = 'test-cloudfier-examples-expenses';
 var kirraEntity = 'expenses.Employee';
 
 suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
     var kirra = new Kirra(kirraApiUrl, kirraApplicationId);
-    this.timeout(120000);
+    this.timeout(30000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, errorMessage) { 
@@ -364,7 +364,7 @@ suite('EBUI', function() {
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(Object.keys(m.error).length, 0);            
+                assert.equal(Object.keys(m.error).length, 0, util.inspect(m));            
                 assert.equal(m.invocations.length, 1);
                 assert.equal(m.invocationsCompleted.length, 1);                                
                 assert.ok(m.invocationsCompleted[0].operation);
