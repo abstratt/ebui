@@ -50,8 +50,9 @@ var MandrillGateway = function (mandrillKey, defaultFromEmail, defaultFromName) 
 	      method: 'POST',
               headers: { 'content-type': 'application/json' }
 	    };
-        console.log(options);
-        console.log(payload);
+	    console.log("message: \n"+ JSON.stringify(message));
+        console.log("options: \n"+ JSON.stringify(options));
+        console.log("payload: \n"+ JSON.stringify(payload));
         var req = https.request(options, function(res) {
               res.on('data', function(d) {
                   process.stdout.write(d);
