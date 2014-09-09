@@ -158,10 +158,6 @@ var EBUIApp = function() {
         }, 10000);
     };
 
-    self.replyToSender = function(message, body, senderEmail) {
-        return self.mandrillGateway.replyToSender(message, body, senderEmail);
-    };
-
     self.processPendingMessages = function () {
         return self.messageStore.getPendingMessages('messages').each(function (message) {
             self.processPendingMessage(message);
