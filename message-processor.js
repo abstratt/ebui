@@ -78,6 +78,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         }
         var kirraApp = new Kirra(kirraApiUrl, message.application);
         message.status = 'Processing';
+        message.error = {};
         return messageStore.saveMessage(message).then(function () {
             return kirraApp.getApplication();
         }).then(function () {
@@ -93,7 +94,8 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                 var values = {};
                 var links = {};
                 var invocations = [];
-                var linkResolvers = [], argumentResolvers = [];                
+                var linkResolvers = [];
+                var argumentResolvers = [];                
                 message_values: for (var key in message.values) {
                     entity_properties: for (var property in entity.properties) {
                         if (entity.properties[property].name.toUpperCase() === key.toUpperCase() || entity.properties[property].label.toUpperCase() === key.toUpperCase()) {
@@ -110,9 +112,9 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                                     entity.relationships[r]
                                 ));
                             promise = promise.then(function () {
-                                return linkResolvers.shift().then(function(result) {
-                                    links[result.context.name] = [{ uri: result.matching[0].uri }];
-                                });
+                                return linkResolvers.shift();
+                            }).then(function(result) {
+                                links[result.context.name] = [{ uri: result.matching[0].uri }];
                             });
                             continue message_values;
                         }
@@ -133,9 +135,9 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                                         { invocationIndex: invocations.length - 1, argumentName: a }
                                     ));
                                     promise = promise.then(function () {
-                                        return argumentResolvers.shift().then(function(result) {
-                                            invocations[result.context.invocationIndex].arguments[result.context.argumentName] = { uri: result.matching[0].uri };
-                                        });
+                                        return argumentResolvers.shift();
+                                    }).then(function(result) {
+                                        invocations[result.context.invocationIndex].arguments[result.context.argumentName] = { uri: result.matching[0].uri };
                                     });
                                 }
                             }
@@ -155,10 +157,10 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             return (message.objectId ? 
                 self.processUpdateMessage(kirraApp, message) :
                 self.processCreationMessage(kirraApp, message)
-            ).then(self.invokePendingActions(kirraApp, message));
-        }, self.onError(message, "Invalid application")).then(
-            function() { return message; }
-        );
+            );
+        }).then(function () { 
+            return self.invokePendingActions(kirraApp, message); 
+        }, self.onError(message, "Invalid application"));
     };
     
     self.makeEmailForInstance = function(message) {
@@ -166,25 +168,29 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
     };
     
     self.invokePendingActions = function(kirraApp, message) {
-        message.invocationsAttempted = [];
-        message.invocationsCompleted = [];            
         var invocationConsumer;
-        
-        invocationConsumer = function(message) {
-            if (message.invocations.length === 0) {
-                return message;
+        var invocationsAttempted = message.invocations.slice(0);        
+        var messageId = message._id;
+        var objectId = message.objectId;
+        invocationConsumer = function() {
+            var nextToInvoke = invocationsAttempted.shift();
+            if (!nextToInvoke) {
+                return self.messageStore.getById(messageId);
             }
-            var nextToInvoke = message.invocations.shift();
-            message.invocationsAttempted.push(nextToInvoke);
-            return self.messageStore.saveMessage(message).then(function(message) {
-                return kirraApp.invokeOperation(message.objectId, nextToInvoke.operation, nextToInvoke.arguments);
-            }).then(function() {
-                var justInvoked = message.invocationsAttempted.shift();
-                message.invocationsCompleted.push(justInvoked);                            
+            return kirraApp.invokeOperation(
+                objectId, nextToInvoke.operation, nextToInvoke.arguments
+            ).then(function() {
+                return self.messageStore.getById(messageId);
+            }).then(function(message) {
+                message.invocationsCompleted.push(nextToInvoke);                            
+    	        //kirraApp.getInstance(message).then(function(instance) {
+    	        //    self.sendMessageWithLink(message, instance, "Message successfully processed. Action " + justInvoked.operation.label + " was invoked.");
+	            //}, self.onError(message, "Error processing your message, action failed: " + justInvoked.operation.label));
                 return self.messageStore.saveMessage(message);
-            }).then(invocationConsumer);
+            }).then(invocationConsumer, self.onError(message, "Error processing your message, action " + nextToInvoke.operation.label + " not performed"));
         };
-        return invocationConsumer(message);
+        message.invocationsCompleted = [];            
+        return self.messageStore.saveMessage(message).then(invocationConsumer);
     };
     
     self.processCreationMessage = function(kirraApp, message) {
@@ -206,7 +212,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
 	        message.status = "Updated";
             message.values = instance.values;
             message.links = instance.links;
-	        return self.messageStore.saveMessage(message).then(function(updatedMessage) { return updatedMessage; });
+	        return self.messageStore.saveMessage(message);
         }, self.onError(message, "Error processing your message, object not updated."));
     };
     
@@ -226,7 +232,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
 	        console.error(e);
 		    message.status = "Failure";
 		    message.error = e;
-		    messageStore.saveMessage(message);
+		    message = messageStore.saveMessage(message);
 	        self.replyToSender(message, errorMessage + " Reason: " + e.message);
 	        return message;
 	    };

@@ -12,7 +12,7 @@ suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
     var kirra = new Kirra(kirraApiUrl, kirraApplicationId);
-    this.timeout(20000);
+    this.timeout(120000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, errorMessage) { 
@@ -38,7 +38,19 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
+        
+        test('getInstance', function(done) {
+            assert.ok(created);
+            kirra.getInstance({
+                entity: 'expenses.Employee', 
+                objectId: created.objectId
+            }).then(function(instance) {
+                assert.equal(instance.values.name, "John Doe"); 
+            }).then(done, done);
+        });
+        
         test('updateInstance', function(done) {
+            assert.ok(created);
             kirra.updateInstance({
                 entity: 'expenses.Employee', 
                 objectId: created.objectId,
@@ -47,6 +59,7 @@ suite('EBUI', function() {
                 assert.equal(instance.values.name, "John Moe"); 
             }).then(done, done);
         });
+        
 
         test('getInstances', function(done) {
             var suffix = Math.random();
@@ -189,8 +202,7 @@ suite('EBUI', function() {
             messageStore.getById(messageDocumentId).then(
                 function (m) { 
                     assert.ok(m);
-                    assert.equal(m.length, 1);
-                    assert.equal(m[0]._id.toString(), messageDocumentId.toString());                    
+                    assert.equal(messageDocumentId.toString(), m._id.toString());                    
                 }
             ).then(done, done);
         });
@@ -318,18 +330,18 @@ suite('EBUI', function() {
                     values: { submit: undefined, reject: { reason: "expense not allowed" } } };
                 return messageStore.saveMessage(message);
             }).then(function(savedMessage) { 
-                    return messageProcessor.processPendingMessage(savedMessage);
+                return messageProcessor.processPendingMessage(savedMessage);
             }).then(function(m) {
-                assert.equal(m.invocations.length, 0);
-                assert.equal(m.invocationsAttempted.length, 0);                
+                assert.equal(m.invocations.length, 2);
                 assert.equal(m.invocationsCompleted.length, 2);                                
                 assert.ok(m.invocationsCompleted[0].operation);
                 assert.equal(m.invocationsCompleted[0].operation.name, "submit");
                 assert.ok(m.invocationsCompleted[1].operation);
                 assert.equal(m.invocationsCompleted[1].operation.name, "reject");
-                return kirra.getInstance(m);
-            }).then(function(instance) {
-                assert.equal(instance.values.status, "Rejected");                
+              
+          //      return kirra.getInstance(m);
+          //  }).then(function(instance) {
+          //      assert.equal(instance.values.status, "Rejected");                
             }).then(done, done);
         });
         
@@ -352,10 +364,10 @@ suite('EBUI', function() {
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.invocations.length, 0);
-                assert.equal(m.invocationsAttempted.length, 0);                
+                console.log(m);
+                assert.equal(Object.keys(m.error).length, 0);            
+                assert.equal(m.invocations.length, 1);
                 assert.equal(m.invocationsCompleted.length, 1);                                
-                assert.equal(m.invocationsCompleted.length, 1);
                 assert.ok(m.invocationsCompleted[0].operation);
                 assert.equal(m.invocationsCompleted[0].operation.name, "declareExpense");
                 assert.equal(m.invocationsCompleted[0].arguments.description, "Trip to Timbuktu");

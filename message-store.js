@@ -23,7 +23,7 @@ var MessageStore = function (dbhost, dbport, dbname, dbusername, dbpassword) {
     };
     
     self.getById = function(id) {
-        return self.db.get('messages').find({ _id: id });
+        return self.db.get('messages').findById(id);
     };
     
     self.getPendingMessages = function () {
