@@ -14,7 +14,7 @@ suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
     var kirra = new Kirra(kirraApiUrl, expensesApplicationId);
-    this.timeout(99999999);
+    this.timeout(20000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, userFacingMessage) { 
