@@ -151,32 +151,11 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             return promise.then(function () {
                 return messageStore.saveMessage(message); 
             });
-        }).then(function(message) {    
-            if (message.objectId) {
-                return self.processUpdateMessage(kirraApp, message);
-            } else {
-                return self.processCreationMessage(kirraApp, message);
-            }
         }).then(function(message) {
-            message.invocationsAttempted = [];
-            message.invocationsCompleted = [];            
-            var invocationConsumer;
-            
-            invocationConsumer = function(message) {
-                if (message.invocations.length === 0) {
-                    return message;
-                }
-                var nextToInvoke = message.invocations.shift();
-                message.invocationsAttempted.push(nextToInvoke);
-                return self.messageStore.saveMessage(message).then(function(message) {
-                    return kirraApp.invokeOperation(message.objectId, nextToInvoke.operation, nextToInvoke.arguments);
-                }).then(function() {
-                    var justInvoked = message.invocationsAttempted.shift();
-                    message.invocationsCompleted.push(justInvoked);                            
-                    return self.messageStore.saveMessage(message);
-                }).then(invocationConsumer);
-            };
-            return invocationConsumer(message);
+            return (message.objectId ? 
+                self.processUpdateMessage(kirraApp, message) :
+                self.processCreationMessage(kirraApp, message)
+            ).then(self.invokePendingActions(kirraApp, message));
         }, self.onError(message, "Invalid application")).then(
             function() { return message; }
         );
@@ -184,6 +163,28 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
     
     self.makeEmailForInstance = function(message) {
         return message.entity.replace('.', '_') + '-' + message.objectId + '.' + message.application + '@inbox.cloudfier.com';
+    };
+    
+    self.invokePendingActions = function(kirraApp, message) {
+        message.invocationsAttempted = [];
+        message.invocationsCompleted = [];            
+        var invocationConsumer;
+        
+        invocationConsumer = function(message) {
+            if (message.invocations.length === 0) {
+                return message;
+            }
+            var nextToInvoke = message.invocations.shift();
+            message.invocationsAttempted.push(nextToInvoke);
+            return self.messageStore.saveMessage(message).then(function(message) {
+                return kirraApp.invokeOperation(message.objectId, nextToInvoke.operation, nextToInvoke.arguments);
+            }).then(function() {
+                var justInvoked = message.invocationsAttempted.shift();
+                message.invocationsCompleted.push(justInvoked);                            
+                return self.messageStore.saveMessage(message);
+            }).then(invocationConsumer);
+        };
+        return invocationConsumer(message);
     };
     
     self.processCreationMessage = function(kirraApp, message) {
