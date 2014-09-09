@@ -245,26 +245,27 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
-        test('processPendingMessage - using comment', function(done) {
+        test('processPendingMessage - comment as value', function(done) {
             messageStore.saveMessage({ 
                 application : todoApplicationId, 
                 entity : 'todo.Todo', 
                 values: { description: "Something to comment on" }
-            }).then(function (m1) {
-                return messageProcessor.processPendingMessage(m1);
-            }).then(function(m1) {
-                assert.equal(m1.status, "Created");
+            }).then(function (creationMessage) {
+                return messageProcessor.processPendingMessage(creationMessage);
+            }).then(function(creationMessage) {
+                assert.equal(creationMessage.status, "Created");
                 return messageStore.saveMessage({
                     application : todoApplicationId,
                     entity : 'todo.Todo',
-                    objectId: m1.objectId, 
+                    objectId: creationMessage.objectId, 
                     text: "This is just a pointless comment"
                 });
-            }).then(function(m2) {
-                return messageProcessor.processPendingMessage(m2);
-            }).then(function(m2) {
-                assert.equal(m2.status, "Updated");
-                return kirra.getRelatedInstances("expenses.Employee", m2.objectId, "comments");
+            }).then(function(updateMessage) {
+                return messageProcessor.processPendingMessage(updateMessage);
+            }).then(function(updateMessage) {
+                assert.equal(updateMessage.status, "Updated");
+                var kirra = new Kirra(kirraApiUrl, todoApplicationId);
+                return kirra.getRelatedInstances(updateMessage.entity, updateMessage.objectId, "comments");
             }).then(function(instances) {
                 assert.equal(instances.length, 1); 
             }).then(done, done);
@@ -374,10 +375,9 @@ suite('EBUI', function() {
                 assert.equal(m.invocationsCompleted[0].operation.name, "submit");
                 assert.ok(m.invocationsCompleted[1].operation);
                 assert.equal(m.invocationsCompleted[1].operation.name, "reject");
-              
-          //      return kirra.getInstance(m);
-          //  }).then(function(instance) {
-          //      assert.equal(instance.values.status, "Rejected");                
+                return kirra.getInstance(m);
+            }).then(function(instance) {
+                assert.equal(instance.values.status, "Rejected");                
             }).then(done, done);
         });
         

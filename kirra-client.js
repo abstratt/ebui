@@ -90,19 +90,66 @@ var Kirra = function (baseUrl, application) {
     };
 
     self.updateInstance = function(message) {
-        var entity;
         var instance;
+        var commentTargetRelationship;
         return self.getInstance(message).then(function (i) {
             instance = i;
-            return self.getEntity(message.entity);            
-        }).then(function (e) {
-            entity = e;
+            return self.findCommentTargetChildRelationship(message.entity);
+        }).then(function (childRelationship) {
+            commentTargetRelationship = childRelationship;
+            return message;
+        }).then(function (message) {
 		    var mergedValues = merge(merge({}, message.values), instance.values);
 		    var mergedLinks = merge(merge({}, message.links), instance.links);
 		    return self.performRequest('/entities/' + message.entity + '/instances/' + message.objectId, 'PUT', 200, 
 		        { values: mergedValues, links: mergedLinks }
 	        );
+	    }).then(function(parentInstance) {
+	        if (commentTargetRelationship) {
+	            var links = {};
+	            links[commentTargetRelationship.relationship.opposite] = [{uri: parentInstance.uri}];
+	            var values = {};
+	            values[commentTargetRelationship.commentProperty.name] = message.comment;
+	            return self.performRequest('/entities/' + commentTargetRelationship.relationship.typeRef.fullName + '/instances/', 'POST', [201, 200], 
+                    { values: values, links: links }
+                );    
+	        }
+            return parentInstance;
 	    });
+    };
+    
+    self.findCommentTargetChildRelationship = function (parentEntityName) {
+        return self.getEntity(parentEntityName).then(function (e) {
+            var childRelationships = Object.keys(e.relationships).map(function (k) { 
+                return e.relationships[k]; 
+            }).filter(function (r) {
+                return r.style === "CHILD"
+            });
+            // now find the first child relationship that has a comment-like entity (only required field is a Memo field)
+            var finder = function () {
+                var currentRelationship = childRelationships.shift();
+                console.log("***currentRelationship: " + (currentRelationship && currentRelationship.name));
+                if (!currentRelationship) {
+                    return q.thenResolve(undefined);
+                }
+                return self.getEntity(currentRelationship.typeRef.fullName).then(function(childEntity) {
+                    var requiredProperties = Object.keys(childEntity.properties).map(function (k) { 
+                        return childEntity.properties[k]; 
+                    }).filter(function (p) { 
+                        return p.required && !p.hasDefault; 
+                    });
+                    var hasRequiredRelationships = Object.keys(childEntity.relationships).find(function (k) { 
+                        return childEntity.relationships[k].required && !(childEntity.relationships[k].typeRef.fullName === parentEntityName); 
+                    });
+                    if (!hasRequiredRelationships && requiredProperties.length === 1 && requiredProperties[0].typeRef.typeName === "Memo") {
+                        return { relationship: currentRelationship, commentProperty: requiredProperties[0]};          
+                    } else {
+                        return finder();
+                    }
+                });
+            };
+            return finder();
+        });
     };
 
     self.getApplication = function() {
@@ -159,8 +206,8 @@ var Kirra = function (baseUrl, application) {
         return self.performRequest('/entities/' + entity + '/instances/' + filterQuery, undefined, 200);
     };
     
-    self.getRelatedInstances = function(entity, objectId, relationship) {
-        return self.performRequest('/entities/' + entity + '/instances/' + objectId + '/relationships/recordedExpenses/', undefined, 200);
+    self.getRelatedInstances = function(entity, objectId, relationshipName) {
+        return self.performRequest('/entities/' + entity + '/instances/' + objectId + '/relationships/' + relationshipName + '/', undefined, 200);
     };
 
     self.getInstanceTemplate = function(message) {
