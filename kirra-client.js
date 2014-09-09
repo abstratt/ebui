@@ -38,11 +38,11 @@ var Kirra = function (baseUrl, application) {
                 var parsed = JSON.parse(data);
                 if ((typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
                     (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)) {
-                    //console.error("Error response: ", util.inspect(parsed));
+                    console.error("Error response: ", util.inspect(parsed));
                     deferred.reject(parsed);
                 } else {
                     var end = new Date().getTime()
-                    console.error("Took: ", (end - start) + "ms");                    
+                    console.error("Time: ", (end - start) + "ms");                    
                     console.error("Success response: ", util.inspect(parsed));
                     deferred.resolve(parsed);
                 }
@@ -128,7 +128,6 @@ var Kirra = function (baseUrl, application) {
             // now find the first child relationship that has a comment-like entity (only required field is a Memo field)
             var finder = function () {
                 var currentRelationship = childRelationships.shift();
-                console.log("***currentRelationship: " + (currentRelationship && currentRelationship.name));
                 if (!currentRelationship) {
                     return q.thenResolve(undefined);
                 }
