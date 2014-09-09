@@ -271,6 +271,33 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
+        test('processPendingMessage - updating without a comment', function(done) {
+            messageStore.saveMessage({ 
+                application : todoApplicationId, 
+                entity : 'todo.Todo', 
+                values: { description: "Something to comment on" }
+            }).then(function (creationMessage) {
+                return messageProcessor.processPendingMessage(creationMessage);
+            }).then(function(creationMessage) {
+                assert.equal(creationMessage.status, "Created");
+                return messageStore.saveMessage({
+                    application : todoApplicationId,
+                    entity : 'todo.Todo',
+                    objectId: creationMessage.objectId,
+                    // no actual text 
+                    text: "  \n   \n"
+                });
+            }).then(function(updateMessage) {
+                return messageProcessor.processPendingMessage(updateMessage);
+            }).then(function(updateMessage) {
+                assert.equal(updateMessage.status, "Updated");
+                var kirra = new Kirra(kirraApiUrl, todoApplicationId);
+                return kirra.getRelatedInstances(updateMessage.entity, updateMessage.objectId, "comments");
+            }).then(function(instances) {
+                assert.equal(instances.length, 0); 
+            }).then(done, done);
+        });
+        
         test('processPendingMessage - creation of complex instance', function(done) {
             var category, employee;
             kirra.createInstance({

@@ -94,7 +94,7 @@ var Kirra = function (baseUrl, application) {
         var commentTargetRelationship;
         return self.getInstance(message).then(function (i) {
             instance = i;
-            return self.findCommentTargetChildRelationship(message.entity);
+            return  message.comment ? self.findCommentTargetChildRelationship(message.entity) : undefined;
         }).then(function (childRelationship) {
             commentTargetRelationship = childRelationship;
             return message;
