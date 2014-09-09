@@ -14,7 +14,7 @@ suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
     var kirra = new Kirra(kirraApiUrl, expensesApplicationId);
-    this.timeout(20000);
+    this.timeout(30000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, userFacingMessage) { 
@@ -239,11 +239,12 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - using subject', function(done) {
-            messageStore.saveMessage({ application : todoApplicationId, entity : 'todo.Todo', subject: "Something important" }).then(function (m) {
+            messageStore.saveMessage({ application : todoApplicationId, entity : 'todo.Todo', subject: "Something important", text: "More details" }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Created");
                 assert.equal(m.values.description, "Something important");
+                assert.equal(m.values.details, "More details");                
             }).then(done, done);
         });
         
@@ -251,7 +252,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ 
                 application : todoApplicationId, 
                 entity : 'todo.Todo', 
-                values: { description: "Something to comment on" }
+                values: { description: "A description", details: "The details" }
             }).then(function (creationMessage) {
                 return messageProcessor.processPendingMessage(creationMessage);
             }).then(function(creationMessage) {
@@ -277,7 +278,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ 
                 application : todoApplicationId, 
                 entity : 'todo.Todo', 
-                values: { description: "Something to comment on" }
+                values: { description: "A description", details: "The details" }
             }).then(function (creationMessage) {
                 return messageProcessor.processPendingMessage(creationMessage);
             }).then(function(creationMessage) {
