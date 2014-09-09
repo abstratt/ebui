@@ -48,7 +48,9 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         try {
             values = yaml.safeLoad(processingRules.join('\n'));
         } catch(e) {
-            console.error("Could not parse string as YAML: "+ processingRules.join('\n') + "- reason: " + e.message);
+            var errorMessage = "Could not parse string as YAML: "+ processingRules.join('\n') + "- reason: " + e.message;
+            console.error(errorMessage);
+            message.error = { message: errorMessage };
             return message;
         }
         message.comment = comment.trim();
@@ -80,7 +82,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         self.parseMessage(message);
         if (!message.application) {
             message.status = 'Invalid';
-            emailGateway.replyToSender(message, "Unfortunately, your message could not be processed.");
+            emailGateway.replyToSender(message, "Unfortunately, your message could not be processed. " + message.error);
             return messageStore.saveMessage(message).then(function() { return message; });    
         }
         var kirraApp = new Kirra(kirraApiUrl, message.application);
