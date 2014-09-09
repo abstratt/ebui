@@ -14,7 +14,7 @@ suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
     var kirra = new Kirra(kirraApiUrl, expensesApplicationId);
-    this.timeout(30000);
+    this.timeout(20000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, errorMessage) { 
@@ -465,8 +465,10 @@ suite('EBUI', function() {
                 assert.equal(m.status, "Failure");
                 assert.ok(m.error);
                 assert.equal(m.error.message, "Project not found: unknown-app");
-                assert.equal(collectedUserNotifications.length, 1);
+                assert.equal(collectedUserNotifications.length, 1, util.inspect(collectedUserNotifications));
                 assert.equal(collectedUserNotifications[0].errorMessage, "Invalid application. Reason: Project not found: unknown-app");
+                assert.ok(m._id);                
+                assert.equal(m._id, collectedUserNotifications[0].message._id, util.inspect(collectedUserNotifications[0].message));
             }).then(done, done);
         });
         

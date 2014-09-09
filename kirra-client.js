@@ -46,14 +46,15 @@ var Kirra = function (baseUrl, application) {
                     console.error("Success response: ", util.inspect(parsed));
                     deferred.resolve(parsed);
                 }
-            }).on('error', function(e) {
-                deferred.reject(e);
             });
         });
         if (body) {
             req.write(JSON.stringify(body)); 
         }
         req.end();
+        req.on('error', function(e) {
+            deferred.reject(e);
+        });
         return deferred.promise;
     };
     
@@ -94,7 +95,7 @@ var Kirra = function (baseUrl, application) {
         var commentTargetRelationship;
         return self.getInstance(message).then(function (i) {
             instance = i;
-            return  message.comment ? self.findCommentTargetChildRelationship(message.entity) : undefined;
+            return message.comment ? self.findCommentTargetChildRelationship(message.entity) : undefined;
         }).then(function (childRelationship) {
             commentTargetRelationship = childRelationship;
             return message;

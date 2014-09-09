@@ -56,6 +56,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         message.comment = comment.trim();
         message.subject = message.subject ? message.subject.trim() : '';
         message.values = merge(merge({}, values), message.values);
+        message.invocations = [];
         // (entity)(-objectId)?.(application)@<domain>
         //  Examples: issue.my-application@foo.bar.com and issue-43234cc221ad.my-application@foo.bar.com
         var elements = /^([a-z_A-Z]+)(?:-([^.]+))?\.([^@^.]+)@.*$/.exec(message.account);
@@ -90,7 +91,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         message.error = {};
         return messageStore.saveMessage(message).then(function () {
             return kirraApp.getApplication();
-        }).then(function () {
+        }).then(function (application) {
             return kirraApp.getEntity(message.entity);
         }).then(function (entity) {
             var deferred = q.defer();
@@ -209,8 +210,10 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             message.values = instance.values;
             message.links = instance.links;
             message.status = "Created";
-            self.sendMessageWithLink(message, instance, "Message successfully processed. Object was created.");
-            return self.messageStore.saveMessage(message).then(function(savedMessage) { return savedMessage; });
+            return self.messageStore.saveMessage(message).then(function(savedMessage) {
+                self.sendMessageWithLink(savedMessage, instance, "Message successfully processed. Object was created.");
+                return savedMessage;
+            });
         }, self.onError(message, "Error processing your message, object not created."));
     };
 
@@ -240,9 +243,10 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             console.error(e);
             message.status = "Failure";
             message.error = e;
-            message = messageStore.saveMessage(message);
-            self.replyToSender(message, errorMessage + " Reason: " + e.message);
-            return message;
+            return messageStore.saveMessage(message).then(function(savedMessage) {
+                self.replyToSender(savedMessage, errorMessage + " Reason: " + e.message);
+                return savedMessage;
+            });
         };
     };  
     
