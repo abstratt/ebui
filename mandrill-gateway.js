@@ -21,8 +21,8 @@ var MandrillGateway = function (mandrillKey, defaultFromEmail, defaultFromName) 
                 // so we can reply in context later
                 _contextMessageId: event.msg.headers['Message-Id']
             };
-    	    console.log("new event: \n"+ JSON.stringify(event));
-    	    console.log("new message: \n"+ JSON.stringify(newMessage));
+    	    console.error("new event: \n"+ JSON.stringify(event));
+    	    console.error("new message: \n"+ JSON.stringify(newMessage));
             messageStore.saveMessage(newMessage);
         });
         return res.send(204);
