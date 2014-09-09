@@ -284,7 +284,7 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
-        test('processPendingMessage - action without parameters', function(done) {
+        test('processPendingMessage - two actions in a row', function(done) {
             var category, employee, expense;
             kirra.createInstance({
                 entity: 'expenses.Category', 
@@ -315,20 +315,21 @@ suite('EBUI', function() {
                 expense = instance;
                 assert.equal(expense.values.status, "Draft");    
                 var message = { objectId: expense.objectId, application : kirraApplicationId, entity : expense.typeRef.fullName, 
-                    values: { submit: undefined } };
+                    values: { submit: undefined, reject: { reason: "expense not allowed" } } };
                 return messageStore.saveMessage(message);
             }).then(function(savedMessage) { 
                     return messageProcessor.processPendingMessage(savedMessage);
             }).then(function(m) {
                 assert.equal(m.invocations.length, 0);
                 assert.equal(m.invocationsAttempted.length, 0);                
-                assert.equal(m.invocationsCompleted.length, 1);                                
-                assert.equal(m.invocationsCompleted.length, 1);
+                assert.equal(m.invocationsCompleted.length, 2);                                
                 assert.ok(m.invocationsCompleted[0].operation);
                 assert.equal(m.invocationsCompleted[0].operation.name, "submit");
+                assert.ok(m.invocationsCompleted[1].operation);
+                assert.equal(m.invocationsCompleted[1].operation.name, "reject");
                 return kirra.getInstance(m);
             }).then(function(instance) {
-                assert.equal(instance.values.status, "Submitted");                
+                assert.equal(instance.values.status, "Rejected");                
             }).then(done, done);
         });
         

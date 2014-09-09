@@ -158,21 +158,25 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                 return self.processCreationMessage(kirraApp, message);
             }
         }).then(function(message) {
-            if (message.invocations.length === 0) {
-                return message;
-            }
             message.invocationsAttempted = [];
             message.invocationsCompleted = [];            
+            var invocationConsumer;
             
-            var nextToInvoke = message.invocations.shift();
-            message.invocationsAttempted.unshift(nextToInvoke);
-            return self.messageStore.saveMessage(message).then(function(message) {
-                return kirraApp.invokeOperation(message.objectId, nextToInvoke.operation, nextToInvoke.arguments);
-            }).then(function() {
-                var justInvoked = message.invocationsAttempted.shift();
-                message.invocationsCompleted.unshift(justInvoked);                            
-                return self.messageStore.saveMessage(message);
-            });
+            invocationConsumer = function(message) {
+                if (message.invocations.length === 0) {
+                    return message;
+                }
+                var nextToInvoke = message.invocations.shift();
+                message.invocationsAttempted.push(nextToInvoke);
+                return self.messageStore.saveMessage(message).then(function(message) {
+                    return kirraApp.invokeOperation(message.objectId, nextToInvoke.operation, nextToInvoke.arguments);
+                }).then(function() {
+                    var justInvoked = message.invocationsAttempted.shift();
+                    message.invocationsCompleted.push(justInvoked);                            
+                    return self.messageStore.saveMessage(message);
+                }).then(invocationConsumer);
+            };
+            return invocationConsumer(message);
         }, self.onError(message, "Invalid application")).then(
             function() { return message; }
         );

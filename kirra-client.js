@@ -26,7 +26,7 @@ var Kirra = function (baseUrl, application) {
           headers: { 'content-type': 'application/json' }
         };
         var deferred = q.defer();
-        console.error(options.method + " " + options.path + " " + JSON.stringify(body || {}));
+//        console.error(options.method + " " + options.path + " " + JSON.stringify(body || {}));
         var req = http.request(options, function(res) {
             var data = "";
             res.on('data', function(chunk) {
@@ -35,7 +35,7 @@ var Kirra = function (baseUrl, application) {
                 var parsed = JSON.parse(data);
                 if ((typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
                     (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)) {
-                    console.error("Error response: ", util.inspect(parsed));
+//                    console.error("Error response: ", util.inspect(parsed));
                     deferred.reject(parsed);
                 } else {
                     deferred.resolve(parsed);
