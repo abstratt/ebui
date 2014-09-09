@@ -44,7 +44,13 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
 		        }
 		    });
         }
-        var values = yaml.safeLoad(processingRules.join('\n'));
+        var values;
+        try {
+            values = yaml.safeLoad(processingRules.join('\n'));
+        } catch(e) {
+            console.error("Could not parse string as YAML: "+ processingRules.join('\n') + "- reason: " + e.message);
+            return message;
+        }
         message.comment = comment.trim();
         message.subject = message.subject ? message.subject.trim() : '';
         message.values = merge(merge({}, values), message.values);
@@ -161,7 +167,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             );
         }).then(function () { 
             return self.invokePendingActions(kirraApp, message); 
-        }, self.onError(message, "Invalid application"));
+        }, self.onError(message, "Invalid application."));
     };
     
     self.makeEmailForInstance = function(message) {

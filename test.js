@@ -404,12 +404,15 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - unknown application', function(done) {
+            collectedUserNotifications = [];
             messageStore.saveMessage({ application : "unknown-app", entity : "namespace.Entity", values: { } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
                 assert.equal(m.status, "Failure");
                 assert.ok(m.error);
                 assert.equal(m.error.message, "Project not found: unknown-app");
+                assert.equal(collectedUserNotifications.length, 1);
+                assert.equal(collectedUserNotifications[0].errorMessage, "Invalid application. Reason: Project not found: unknown-app");
             }).then(done, done);
         });
         
