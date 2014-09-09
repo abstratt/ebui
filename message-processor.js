@@ -45,7 +45,8 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
 		    });
         }
         var values = yaml.safeLoad(processingRules.join('\n'));
-        message.comment = comment;
+        message.comment = comment.trim();
+        message.subject = message.subject ? message.subject.trim() : '';
         message.values = merge(merge({}, values), message.values);
         // (entity)(-objectId)?.(application)@<domain>
         //  Examples: issue.my-application@foo.bar.com and issue-43234cc221ad.my-application@foo.bar.com
@@ -194,7 +195,6 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
     };
     
     self.processCreationMessage = function(kirraApp, message) {
-        var createdInstance;
         return kirraApp.createInstance(message).then(function (instance) {
             createdInstance = instance;
             message.objectId = instance.objectId;	

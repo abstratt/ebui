@@ -58,7 +58,29 @@ var Kirra = function (baseUrl, application) {
     };
     
     self.createInstance = function(message) {
-        return self.getInstanceTemplate(message).then(function (template) {
+        var template;
+        var entity;
+        return self.getInstanceTemplate(message).then(function (t) { 
+            template = t;
+            return self.getEntity(message.entity);
+        }).then(function(e) {
+            entity = e;
+            for (var p in entity.properties) {
+                // fill in an unfulfilled required string property with the subject line if needed
+                if (message.subject && !message.values[p] && !template.values[p] && entity.properties[p].typeRef.typeName === "String" && entity.properties[p].required && !entity.properties[p].hasDefault && entity.properties[p].editable) {
+                    message.values[p] = message.subject;
+                    break;
+                }
+            }
+            for (var p in entity.properties) {
+                // fill in an unfulfilled required memo property with the email comment if needed
+                if (message.comment && !message.values[p] && !template.values[p] && entity.properties[p].typeRef.typeName === "Memo" && entity.properties[p].required && !entity.properties[p].hasDefault && entity.properties[p].editable) {
+                    message.values[p] = message.comment;
+                    break;
+                }
+            }
+            return message;
+        }).then(function (message) {
 		    var mergedValues = merge(merge({}, message.values), template.values);
 		    var mergedLinks = merge(merge({}, message.links), template.links);
             return self.performRequest('/entities/' + message.entity + '/instances/', 'POST', [201, 200], 
@@ -103,7 +125,7 @@ var Kirra = function (baseUrl, application) {
     
     self.getEntities = function() {
         if (self.cachedEntities) {
-            return self.cachedEntities;
+            return q.thenResolve(self.cachedEntities);
         }
         return self.performRequest('/entities/', undefined, 200).then(function (entities) {
             self.cachedEntities = entities;

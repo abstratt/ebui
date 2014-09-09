@@ -234,6 +234,15 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
+        test('processPendingMessage - using subject', function(done) {
+            messageStore.saveMessage({ application : kirraApplicationId, entity : kirraEntity, subject: "John Bonham" }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                assert.equal(m.status, "Created");
+                assert.equal(m.values.name, "John Bonham");
+            }).then(done, done);
+        });
+        
         test('processPendingMessage - creation of complex instance', function(done) {
             var category, employee;
             kirra.createInstance({
@@ -471,7 +480,7 @@ suite('EBUI', function() {
             assert.ok(message.values);
             assert.equal(message.values.Field1, "value1");
             assert.equal(message.values.Field2, "value2");
-            assert.equal(message.comment, "Line 1\nLine 2\n");
+            assert.equal(message.comment, "Line 1\nLine 2");
         });
         
         test('parseMessage - values mixed with comment', function() {
@@ -484,7 +493,7 @@ suite('EBUI', function() {
             assert.ok(message.values);
             assert.equal(message.values.Field1, "value1");
             assert.equal(message.values.Field2, "value2");
-            assert.equal(message.comment, "Line 1\nLine 2\nLine 3\nLine 4\n");            
+            assert.equal(message.comment, "Line 1\nLine 2\nLine 3\nLine 4");            
         });
         
         test('parseMessage - nested values', function() {
