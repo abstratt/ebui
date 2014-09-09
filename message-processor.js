@@ -82,7 +82,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         self.parseMessage(message);
         if (!message.application) {
             message.status = 'Invalid';
-            emailGateway.replyToSender(message, "Unfortunately, your message could not be processed. " + message.error);
+            self.replyToSender(message, "Unfortunately, your message could not be processed. " + message.error);
             return messageStore.saveMessage(message).then(function() { return message; });    
         }
         var kirraApp = new Kirra(kirraApiUrl, message.application);
