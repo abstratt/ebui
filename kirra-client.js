@@ -90,9 +90,15 @@ var Kirra = function (baseUrl, application) {
     };
 
     self.updateInstance = function(message) {
-        return self.getInstance(message).then(function (existing) {
-		    var mergedValues = merge(merge({}, message.values), existing.values);
-		    var mergedLinks = merge(merge({}, message.links), existing.links);
+        var entity;
+        var instance;
+        return self.getInstance(message).then(function (i) {
+            instance = i;
+            return self.getEntity(message.entity);            
+        }).then(function (e) {
+            entity = e;
+		    var mergedValues = merge(merge({}, message.values), instance.values);
+		    var mergedLinks = merge(merge({}, message.links), instance.links);
 		    return self.performRequest('/entities/' + message.entity + '/instances/' + message.objectId, 'PUT', 200, 
 		        { values: mergedValues, links: mergedLinks }
 	        );

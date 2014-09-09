@@ -5,13 +5,15 @@ var MandrillGateway = require("./mandrill-gateway.js");
 var util = require('util');
 
 var assert = require("assert");
-var kirraApplicationId = 'test-cloudfier-examples-expenses';
-var kirraEntity = 'expenses.Employee';
+var user = process.env.KIRRA_USER || 'test';
+var folder = process.env.KIRRA_FOLDER || 'cloudfier-examples';
+var expensesApplicationId = user + '-'+ folder + '-expenses';
+var todoApplicationId = user + '-'+ folder + '-todo';
 
 suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
-    var kirra = new Kirra(kirraApiUrl, kirraApplicationId);
+    var kirra = new Kirra(kirraApiUrl, expensesApplicationId);
     this.timeout(30000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
@@ -226,7 +228,7 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - simple creation', function(done) {
-            messageStore.saveMessage({ application : kirraApplicationId, entity : kirraEntity, values: { name: "John Bonham"} }).then(function (m) {
+            messageStore.saveMessage({ application : expensesApplicationId, entity : 'expenses.Employee', values: { name: "John Bonham"} }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Created");
@@ -235,11 +237,36 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - using subject', function(done) {
-            messageStore.saveMessage({ application : kirraApplicationId, entity : kirraEntity, subject: "John Bonham" }).then(function (m) {
+            messageStore.saveMessage({ application : todoApplicationId, entity : 'todo.Todo', subject: "Something important" }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Created");
-                assert.equal(m.values.name, "John Bonham");
+                assert.equal(m.values.description, "Something important");
+            }).then(done, done);
+        });
+        
+        test('processPendingMessage - using comment', function(done) {
+            messageStore.saveMessage({ 
+                application : todoApplicationId, 
+                entity : 'todo.Todo', 
+                values: { description: "Something to comment on" }
+            }).then(function (m1) {
+                return messageProcessor.processPendingMessage(m1);
+            }).then(function(m1) {
+                assert.equal(m1.status, "Created");
+                return messageStore.saveMessage({
+                    application : todoApplicationId,
+                    entity : 'todo.Todo',
+                    objectId: m1.objectId, 
+                    text: "This is just a pointless comment"
+                });
+            }).then(function(m2) {
+                return messageProcessor.processPendingMessage(m2);
+            }).then(function(m2) {
+                assert.equal(m2.status, "Updated");
+                return kirra.getRelatedInstances("expenses.Employee", m2.objectId, "comments");
+            }).then(function(instances) {
+                assert.equal(instances.length, 1); 
             }).then(done, done);
         });
         
@@ -264,7 +291,7 @@ suite('EBUI', function() {
                     employee: employee.values.name 
                 };
                 return messageStore.saveMessage({
-                    application : kirraApplicationId,
+                    application : expensesApplicationId,
                     entity: 'expenses.Expense', 
                     values: values
                 });                    
@@ -283,7 +310,7 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - creation with incomplete entity', function(done) {
-            messageStore.saveMessage({ application : kirraApplicationId, entity : 'employee', values: { name: "John Bonham"} }).then(function (m) {
+            messageStore.saveMessage({ application : expensesApplicationId, entity : 'employee', values: { name: "John Bonham"} }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 assert.equal(m.status, "Created");
@@ -296,7 +323,7 @@ suite('EBUI', function() {
                 entity: 'expenses.Employee', 
                 values: { name: "John Doe" }
             }).then(function(instance) {
-                var message = { objectId: instance.objectId, application : kirraApplicationId, entity : kirraEntity, values: instance.values };
+                var message = { objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', values: instance.values };
                 return messageStore.saveMessage(message).then(function() { return message; });
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
@@ -335,7 +362,7 @@ suite('EBUI', function() {
             }).then(function (instance) {
                 expense = instance;
                 assert.equal(expense.values.status, "Draft");    
-                var message = { objectId: expense.objectId, application : kirraApplicationId, entity : expense.typeRef.fullName, 
+                var message = { objectId: expense.objectId, application : expensesApplicationId, entity : expense.typeRef.fullName, 
                     values: { submit: undefined, reject: { reason: "expense not allowed" } } };
                 return messageStore.saveMessage(message);
             }).then(function(savedMessage) { 
@@ -368,7 +395,7 @@ suite('EBUI', function() {
             }).then(function(instance) {
                 employee = instance;
                 var values = { declareExpense: { description: "Trip to Timbuktu", amount: 205.45, date: "2014/09/21", category: category.values.name }  };
-                var message = { objectId: instance.objectId, application : kirraApplicationId, entity : kirraEntity, values: values };
+                var message = { objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', values: values };
                 return messageStore.saveMessage(message).then(function() { return message; });
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
@@ -390,7 +417,7 @@ suite('EBUI', function() {
                 entity: 'expenses.Employee', 
                 values: { name: "John Doe" }
             }).then(function(instance) {
-                var message = { objectId: instance.objectId, application : kirraApplicationId, entity : kirraEntity, values: { Name : 'John Moe' } };
+                var message = { objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', values: { Name : 'John Moe' } };
                 return messageStore.saveMessage(message).then(function() { return message; });
             }).then(function (m) {
                 assert.equal(m.values.Name, "John Moe");                
@@ -417,7 +444,7 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - unknown entity', function(done) {
-            messageStore.saveMessage({ application : kirraApplicationId, entity : "namespace.Entity", values: { } }).then(function (m) {
+            messageStore.saveMessage({ application : expensesApplicationId, entity : "namespace.Entity", values: { } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
                 assert.equal(m.status, "Failure");
@@ -427,7 +454,7 @@ suite('EBUI', function() {
         });
 
         test('processPendingMessage - unknown instance', function(done) {
-            messageStore.saveMessage({ application : kirraApplicationId, entity : "expenses.Employee", objectId: "-1", values: { name: "Some Name" } }).then(function (m) {
+            messageStore.saveMessage({ application : expensesApplicationId, entity : "expenses.Employee", objectId: "-1", values: { name: "Some Name" } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
                 assert.equal(m.status, "Failure");
@@ -439,8 +466,8 @@ suite('EBUI', function() {
 
         test('processPendingMessage - missing required field', function(done) {
             messageStore.saveMessage({ 
-                application : kirraApplicationId, 
-                entity : kirraEntity, 
+                application : expensesApplicationId, 
+                entity : 'expenses.Employee', 
                 values: {} 
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);

@@ -28,21 +28,21 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         var processingRules = [];
         var isProcessing = false;
         if (text) {
-		    text.split("\n").forEach(function (current) {        
-		        if (isProcessing) {
+            text.split("\n").forEach(function (current) {        
+                if (isProcessing) {
                     if (current.indexOf('--') === 0) {
                         isProcessing = false;
                     } else {
-	                    processingRules.push(current);
+                        processingRules.push(current);
                     }
-		        } else {
-		            if (current.indexOf('--') === 0) {
-		                isProcessing = true;
-		            } else {
-		                comment += current + '\n';
-		            }
-		        }
-		    });
+                } else {
+                    if (current.indexOf('--') === 0) {
+                        isProcessing = true;
+                    } else {
+                        comment += current + '\n';
+                    }
+                }
+            });
         }
         var values;
         try {
@@ -192,9 +192,9 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                 return self.messageStore.getById(messageId);
             }).then(function(message) {
                 message.invocationsCompleted.push(nextToInvoke);                            
-    	        kirraApp.getInstance(message).then(function(instance) {
-    	            self.sendMessageWithLink(message, instance, "Message successfully processed. Action " + justInvoked.operation.label + " was invoked.");
-	            });
+                kirraApp.getInstance(message).then(function(instance) {
+                    self.sendMessageWithLink(message, instance, "Message successfully processed. Action " + justInvoked.operation.label + " was invoked.");
+                });
                 return self.messageStore.saveMessage(message);
             }).then(invocationConsumer, self.onError(message, "Error processing your message, action " + nextToInvoke.operation.label + " not performed"));
         };
@@ -205,22 +205,22 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
     self.processCreationMessage = function(kirraApp, message) {
         return kirraApp.createInstance(message).then(function (instance) {
             createdInstance = instance;
-            message.objectId = instance.objectId;	
+            message.objectId = instance.objectId;    
             message.values = instance.values;
             message.links = instance.links;
             message.status = "Created";
-	        self.sendMessageWithLink(message, instance, "Message successfully processed. Object was created.");
+            self.sendMessageWithLink(message, instance, "Message successfully processed. Object was created.");
             return self.messageStore.saveMessage(message).then(function(savedMessage) { return savedMessage; });
         }, self.onError(message, "Error processing your message, object not created."));
     };
 
     self.processUpdateMessage = function(kirraApp, message) {
         return kirraApp.updateInstance(message).then(function (instance) {
-	        self.sendMessageWithLink(message, instance, "Message successfully processed. Object was updated.");
-	        message.status = "Updated";
+            self.sendMessageWithLink(message, instance, "Message successfully processed. Object was updated.");
+            message.status = "Updated";
             message.values = instance.values;
             message.links = instance.links;
-	        return self.messageStore.saveMessage(message);
+            return self.messageStore.saveMessage(message);
         }, self.onError(message, "Error processing your message, object not updated."));
     };
     
@@ -236,14 +236,14 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
     };
     
     self.onError = function(message, errorMessage) {
-	    return function (e) {
-	        console.error(e);
-		    message.status = "Failure";
-		    message.error = e;
-		    message = messageStore.saveMessage(message);
-	        self.replyToSender(message, errorMessage + " Reason: " + e.message);
-	        return message;
-	    };
+        return function (e) {
+            console.error(e);
+            message.status = "Failure";
+            message.error = e;
+            message = messageStore.saveMessage(message);
+            self.replyToSender(message, errorMessage + " Reason: " + e.message);
+            return message;
+        };
     };  
     
     return self;
