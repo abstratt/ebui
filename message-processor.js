@@ -195,6 +195,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         var objectId = message.objectId;
         invocationConsumer = function() {
             var nextToInvoke = invocationsAttempted.shift();
+            var entity;
             if (!nextToInvoke) {
                 return self.messageStore.getById(messageId);
             }
@@ -205,7 +206,9 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                 return kirraApp.getInstance(message);
             }).then(function(i) {
                 freshInstance = i;
-            }).then(function() {
+                return kirraApp.getExactEntity(freshInstance.typeRef.fullName);
+            }).then(function(e) {
+                entity = e;
                 return self.messageStore.getById(messageId);
             }).then(function(freshMessage) {
                 freshMessage.invocationsCompleted.push(nextToInvoke);
@@ -213,7 +216,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                 freshMessage.links = freshInstance.links;                
                 return self.messageStore.saveMessage(freshMessage);
             }).then(function(savedMessage) {
-                self.sendMessageWithLink(savedMessage, freshInstance, "Message successfully processed. Action " + nextToInvoke.operation.label + " was invoked.");
+                self.sendMessageWithLink(savedMessage, entity, freshInstance, "Message successfully processed. Action " + nextToInvoke.operation.label + " was invoked.");
                 return savedMessage;
             }).then(invocationConsumer, self.onError(message, "Error processing your message, action " + nextToInvoke.operation.label + " not performed."));
         };
@@ -222,25 +225,32 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
     };
     
     self.processCreationMessage = function(kirraApp, message) {
+        var createdInstance;
         return kirraApp.createInstance(message).then(function (instance) {
             createdInstance = instance;
-            message.objectId = instance.objectId;    
-            message.values = instance.values;
-            message.links = instance.links;
+            return kirraApp.getExactEntity(instance.typeRef.fullName);
+        }).then(function(entity) {
+            message.objectId = createdInstance.objectId;    
+            message.values = createdInstance.values;
+            message.links = createdInstance.links;
             message.status = "Created";
             return self.messageStore.saveMessage(message).then(function(savedMessage) {
-                self.sendMessageWithLink(savedMessage, instance, "Message successfully processed. Object was created.");
+                self.sendMessageWithLink(savedMessage, entity, createdInstance, "Message successfully processed. Object was created.");
                 return savedMessage;
             });
         }, self.onError(message, "Error processing your message, object not created."));
     };
 
     self.processUpdateMessage = function(kirraApp, message) {
+        var updatedInstance;
         return kirraApp.updateInstance(message).then(function (instance) {
-            self.sendMessageWithLink(message, instance, "Message successfully processed. Object was updated.");
+            updatedInstance = instance;
+            return kirraApp.getExactEntity(instance.typeRef.fullName);
+        }).then(function (entity) {
+            self.sendMessageWithLink(message, entity, updatedInstance, "Message successfully processed. Object was updated.");
             message.status = "Updated";
-            message.values = instance.values;
-            message.links = instance.links;
+            message.values = updatedInstance.values;
+            message.links = updatedInstance.links;
             return self.messageStore.saveMessage(message);
         }, self.onError(message, "Error processing your message, object not updated."));
     };
@@ -249,9 +259,9 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         emailGateway.replyToSender(message, body, senderEmail);
     };
     
-    self.sendMessageWithLink = function(message, instance, userMessage) {
-        self.replyToSender(message, userMessage + "\n" + yaml.safeDump(instance.values, { skipInvalid: true }) +
-            "Use the URL below to access this object:\n\n" +
+    self.sendMessageWithLink = function(message, entity, instance, userMessage) {
+        self.replyToSender(message, userMessage + "\n" + self.printUserFriendlyInstance(entity, instance) +
+            "\n\n-------------------------------\n\nUse this link to edit it:\n\n" +
             kirraBaseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
             message.application + '#' + encodeURIComponent('/entities/' + message.entity + '/instances/' + message.objectId), self.makeEmailForInstance(message));
     };
@@ -267,7 +277,28 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                 return savedMessage;
             });
         };
-    };  
+    };
+    
+    self.printUserFriendlyInstance = function(entity, instance) {
+        var displayValues = {};
+        var properties = entity.properties;
+        Object.keys(properties).forEach(function(p) {
+            if (properties[p].userVisible && instance.values[p]) {
+                displayValues[properties[p].label] = instance.values[p];
+            }
+        });
+        var relationships = entity.relationships;
+        Object.keys(relationships).forEach(function(r) {
+            if (relationships[r].userVisible && !relationships[r].multiple && relationships[r].navigable && instance.links[r] && instance.links[r].length && instance.links[r][0].shorthand) {
+                displayValues[relationships[r].label] = instance.links[r][0].shorthand;
+            }
+        });
+        var lines = [];
+        Object.keys(displayValues).forEach(function(v) {
+            lines.push(v + ": " + displayValues[v]);
+        });
+        return lines.join("\n");
+    };
     
     return self;
 };
