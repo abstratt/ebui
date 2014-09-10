@@ -283,7 +283,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         var displayValues = {};
         var properties = entity.properties;
         Object.keys(properties).forEach(function(p) {
-            if (properties[p].userVisible && instance.values[p]) {
+            if (properties[p].userVisible && (instance.values[p] !== undefined)) {
                 var displayValue = instance.values[p];
                 if (properties[p].typeRef.typeName === "Memo") {
                     displayValue = "\n" + displayValue;
@@ -293,7 +293,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         });
         var relationships = entity.relationships;
         Object.keys(relationships).forEach(function(r) {
-            if (relationships[r].userVisible && !relationships[r].multiple && relationships[r].navigable && instance.links[r] && instance.links[r].length && instance.links[r][0].shorthand) {
+            if (relationships[r].visible && !relationships[r].multiple && instance.links[r].length && instance.links[r][0].shorthand) {u
                 displayValues[relationships[r].label] = instance.links[r][0].shorthand;
             }
         });
