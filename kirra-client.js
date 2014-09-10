@@ -19,10 +19,11 @@ var Kirra = function (baseUrl, application) {
     
     self.cachedEntities = undefined;
 
-    self.performRequestOnURL = function(url, method, expectedStatus, body) {
+    self.performRequestOnURL = function(requestUrl, method, expectedStatus, body) {
+        var parsedUrl = url.parse(requestUrl);
         var options = {
-          hostname: url.hostname,
-          path: url.pathname,
+          hostname: parsedUrl.hostname,
+          path: parsedUrl.pathname,
           method: method || 'GET',
           headers: { 'content-type': 'application/json' }
         };
@@ -58,8 +59,8 @@ var Kirra = function (baseUrl, application) {
     }
     
     self.performRequest = function(path, method, expectedStatus, body) {
-        var url = url.parse(self.baseUrl + self.application + path);	        
-        return self.performRequestOnURL(url, method, expectedStatus, body);
+        var requestUrl = self.baseUrl + self.application + path;	        
+        return self.performRequestOnURL(requestUrl, method, expectedStatus, body);
     };
     
     self.createInstance = function(message) {
