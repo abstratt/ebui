@@ -8,7 +8,11 @@ EBUI is an Email-Based User Interface for business applications. It acts as a tr
 
 This is still an experiment. What is working:
 - can create a new business entity instance
+- on creation, subject and body fill in for missing required string/memo properties)
 - can update an existing business entity instance
+- on update, body will result in a new instance of a *comment-like child entity* (an entity with a memo field and no other required fields) to be created
+- can invoke actions with or without arguments
+- can refer (link) to instances of related entities using their shorthand
 
 Interested? Please join by contributing code, bugs, feature requests etc.
 
@@ -62,8 +66,12 @@ Actions can be explicitly invoked on an object by using the following syntax:
 which would send the "Done" message to the target object. If the action has parameters, the following syntax can be used:
 
     --
-    Rejected:
+    Reject:
       Reason: Expenses on entertainment are not reimbursable.
+
+or (for passing a single argument):
+    --
+    Reject: Expenses on entertainment are not reimbursable.
 
 which would send the "Reject" message with the shown message as an argument for the 'reason' parameter. 
 
