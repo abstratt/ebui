@@ -13,7 +13,9 @@ You can try EBUI against a Cloudfier example application named Ship-it!, a simpl
 Send an email like this:
 
 To: issue.test-cloudfier-examples-shipit-plus@inbox.cloudfier.com
+
 Subject: allow reporting issues via email
+
 Body:
 
     When I send an email, an issue should be automatically created. Just like this one I am sending now. 
