@@ -18,13 +18,13 @@ Subject: allow reporting issues via email
 
 Body:
 
+    --
+    Project: Cloudfier issues
+    Reporter: gtorres@abstratt.com
+    --
+    
     When I send an email, an issue should be automatically created. Just like this one I am sending now. 
     The subject should become the summary, and this text should become the description.
-    --
-    Severity: Enhancement
-    Project: Cloudfier issues
-    Reporter: rafael@abstratt.com
-    --
     
 After a while (1 minute), you should get a confirmation message:
 
@@ -36,7 +36,7 @@ After a while (1 minute), you should get a confirmation message:
     Issue Id: 60
     Issue Key: CLD-60
     Reported On: 2014-09-09T00:00Z
-    Severity: Major
+    Severity: Normal
     Status: Open
     Waiting For: 1 day(s)
     Description:
@@ -56,14 +56,16 @@ After a while (1 minute), you should get a confirmation message:
 
 Reply to the creation confirmation message with these contents:
 
-    We will be happy to take a community contribution for this one.
-    Just let me know.
-    
-    BTW, this is not a major issue, but a feature request. Changing severity.
-    
     -- 
     severity: Enhancement
     labels: bountyavailable
+    --
+    
+    We will be happy to take a community contribution for this one.
+    Just let me know.
+    
+    BTW, this is a feature request. Changing severity.
+    
 
 which will change the severity to Enhancement, link to an existing label "bountyavailable" and add a child Comment instance to the Issue instance.
 
@@ -111,13 +113,15 @@ Email attachments map to the first Blob property in the corresponding entity.
 
 Properties can be set on creation or update using the following syntax in the body of an email:
 
-    Thanks for your report. I was able to reproduce it locally, and agree it is a 
-    dangerous bug. We will fix it right away.
     --
     Priority: High
     Assignee: Jenniffer Strong
     Fix for: v2.1.1
+    --
+    Thanks for your report. I was able to reproduce it locally, and agree it is a 
+    dangerous bug. We will fix it right away.
 
+Note the 
 
 #### Invoking actions
 
