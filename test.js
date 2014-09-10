@@ -270,7 +270,8 @@ suite('EBUI', function() {
                 var kirra = new Kirra(kirraApiUrl, todoApplicationId);
                 return kirra.getRelatedInstances(updateMessage.entity, updateMessage.objectId, "comments");
             }).then(function(instances) {
-                assert.equal(instances.length, 1); 
+                assert.equal(instances.length, 1);
+                assert.equal(instances.contents[0].values['comment'], 'This is just a pointless comment'); 
             }).then(done, done);
         });
         
