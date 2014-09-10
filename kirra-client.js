@@ -18,12 +18,11 @@ var Kirra = function (baseUrl, application) {
     self.application = application;    
     
     self.cachedEntities = undefined;
-    
-    self.performRequest = function(path, method, expectedStatus, body) {
-        var parsedKirraBaseUrl = url.parse(self.baseUrl);	        
+
+    self.performRequestOnURL = function(url, method, expectedStatus, body) {
         var options = {
-          hostname: parsedKirraBaseUrl.hostname,
-          path: parsedKirraBaseUrl.pathname + self.application + path,
+          hostname: url.hostname,
+          path: url.pathname,
           method: method || 'GET',
           headers: { 'content-type': 'application/json' }
         };
@@ -56,6 +55,11 @@ var Kirra = function (baseUrl, application) {
             deferred.reject(e);
         });
         return deferred.promise;
+    }
+    
+    self.performRequest = function(path, method, expectedStatus, body) {
+        var url = url.parse(self.baseUrl + self.application + path);	        
+        return self.performRequestOnURL(url, method, expectedStatus, body);
     };
     
     self.createInstance = function(message) {
