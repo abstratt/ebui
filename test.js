@@ -395,7 +395,7 @@ suite('EBUI', function() {
                 expense = instance;
                 assert.equal(expense.values.status, "Draft");    
                 var message = { objectId: expense.objectId, application : expensesApplicationId, entity : expense.typeRef.fullName, 
-                    values: { submit: undefined, reject: { reason: "expense not allowed" } } };
+                    values: { submit: undefined, reject: "expense not allowed" } };
                 return messageStore.saveMessage(message);
             }).then(function(savedMessage) { 
                 return messageProcessor.processPendingMessage(savedMessage);

@@ -132,23 +132,34 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
                     entity_actions: for (var o in entity.operations) {
                         var operation = entity.operations[o];
                         if (operation.name.toUpperCase() === key.toUpperCase() || operation.label.toUpperCase() === key.toUpperCase()) {
-                            var operationArguments = message.values[key];
-                            invocations.push({ operation: operation, arguments: operationArguments });
-                            for (var a in operationArguments) {
-                                var parameter = operation.parameters.find(function (p) { return p.name === a });
-                                if (parameter && parameter.typeRef.kind === 'Entity') {
-                                    argumentResolvers.push(self.resolveLooseReference(
-                                        kirraApp,
-                                        parameter.typeRef.fullName,
-                                        operationArguments[a],
-                                        // context needs two coordinates - the invocation, and the argument name
-                                        { invocationIndex: invocations.length - 1, argumentName: a }
-                                    ));
-                                    promise = promise.then(function () {
-                                        return argumentResolvers.shift();
-                                    }).then(function(result) {
-                                        invocations[result.context.invocationIndex].arguments[result.context.argumentName] = { uri: result.matching[0].uri };
-                                    });
+                            var invocation = { operation: operation, arguments: message.values[key] };
+                            invocations.push(invocation);
+                            if (operation.parameters && operation.parameters.length) {
+                                if (typeof(invocation.arguments) !== 'object') {
+                                    // argument is a single value, convert it to a single-slot object matching the first parameter
+                                    var singleArgument = invocation.arguments; 
+                                    invocation.arguments = {};
+                                    invocation.arguments[operation.parameters[0].name] = singleArgument;
+                                }
+                                for (var a in invocation.arguments) {
+                                    var parameter = operation.parameters.find(function (p) { return p.name === a });
+                                    if (parameter && parameter.typeRef.kind === 'Entity') {
+                                        // we allow users to refer to other objects based on a string identifying the instance,
+                                        // need to resolve to a reference
+                                        argumentResolvers.push(self.resolveLooseReference(
+                                            kirraApp,
+                                            parameter.typeRef.fullName,
+                                            invocation.arguments[a],
+                                            // context needs two coordinates - the invocation, and the argument name
+                                            { invocationIndex: invocations.length - 1, argumentName: a }
+                                        ));
+                                        promise = promise.then(function () {
+                                            return argumentResolvers.shift();
+                                        }).then(function(result) {
+                                            // finally resolve the reference
+                                            invocations[result.context.invocationIndex].arguments[result.context.argumentName] = { uri: result.matching[0].uri };
+                                        });
+                                    }
                                 }
                             }
                             continue message_values;
@@ -204,7 +215,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             }).then(function(savedMessage) {
                 self.sendMessageWithLink(savedMessage, freshInstance, "Message successfully processed. Action " + nextToInvoke.operation.label + " was invoked.");
                 return savedMessage;
-            }).then(invocationConsumer, self.onError(message, "Error processing your message, action " + nextToInvoke.operation.label + " not performed"));
+            }).then(invocationConsumer, self.onError(message, "Error processing your message, action " + nextToInvoke.operation.label + " not performed."));
         };
         message.invocationsCompleted = [];            
         return self.messageStore.saveMessage(message).then(invocationConsumer);
@@ -251,7 +262,8 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
             message.status = "Failure";
             message.error = e;
             return messageStore.saveMessage(message).then(function(savedMessage) {
-                self.replyToSender(savedMessage, errorMessage + " Reason: " + e.message);
+                var reason = typeof(e.message) !== 'object' ? e.message : yaml.safeDump(e.message);
+                self.replyToSender(savedMessage, errorMessage + " Reason: " + reason);
                 return savedMessage;
             });
         };
