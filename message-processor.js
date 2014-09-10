@@ -293,7 +293,7 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         });
         var relationships = entity.relationships;
         Object.keys(relationships).forEach(function(r) {
-            if (relationships[r].visible && !relationships[r].multiple && instance.links[r].length && instance.links[r][0].shorthand) {u
+            if (relationships[r].visible && !relationships[r].multiple && instance.links[r] && instance.links[r].length && instance.links[r][0].shorthand) {
                 displayValues[relationships[r].label] = instance.links[r][0].shorthand;
             }
         });
