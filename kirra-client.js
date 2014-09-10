@@ -126,26 +126,39 @@ var Kirra = function (baseUrl, application) {
             }).filter(function (r) {
                 return r.style === "CHILD"
             });
-            // now find the first child relationship that has a comment-like entity (only required field is a Memo field)
+            // now find the first child relationship that has a comment-like entity 
+            // (only required field is a Memo field or there are no required fields and there is at least one Memo field)
             var finder = function () {
                 var currentRelationship = childRelationships.shift();
                 if (!currentRelationship) {
                     return q.thenResolve(undefined);
                 }
                 return self.getEntity(currentRelationship.typeRef.fullName).then(function(childEntity) {
-                    var requiredProperties = Object.keys(childEntity.properties).map(function (k) { 
+                    var properties = Object.keys(childEntity.properties).map(function (k) { 
                         return childEntity.properties[k]; 
-                    }).filter(function (p) { 
+                    });
+                    var requiredProperties = properties.filter(function (p) { 
                         return p.required && !p.hasDefault; 
+                    });
+                    var memoProperties = properties.filter(function (p) { 
+                        return p.typeRef.typeName === 'Memo' && p.userVisible && (p.initializable || p.editable); 
                     });
                     var hasRequiredRelationships = Object.keys(childEntity.relationships).find(function (k) { 
                         return childEntity.relationships[k].required && !(childEntity.relationships[k].typeRef.fullName === parentEntityName); 
                     });
-                    if (!hasRequiredRelationships && requiredProperties.length === 1 && requiredProperties[0].typeRef.typeName === "Memo") {
-                        return { relationship: currentRelationship, commentProperty: requiredProperties[0]};          
-                    } else {
+                    if (hasRequiredRelationships) {
                         return finder();
                     }
+                    if (memoProperties.length === 0) {
+                        return finder();
+                    }
+                    if (requiredProperties.length > 1) {
+                        return finder();
+                    }
+                    if (requiredProperties.length === 1 && requiredProperties[0].typeRef.typeName !== 'Memo') {
+                        return finder();
+                    }
+                    return { relationship: currentRelationship, commentProperty: memoProperties[0]};          
                 });
             };
             return finder();
