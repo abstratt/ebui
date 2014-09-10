@@ -27,7 +27,8 @@
     "monk": "*",
     "js-yaml": "*",
     "q": "1.0.1",
-    "array.prototype.find": "1.0.0"
+    "array.prototype.find": "1.0.0",
+    "emailreplyparser" : "0.0.5"
   },
   "devDependencies": {
      "mocha": "*"

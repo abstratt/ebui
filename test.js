@@ -166,7 +166,7 @@ suite('EBUI', function() {
                         from_email: "fromEmail@domain.com",                        
                         to: "toEmail@domain.com",                        
                         subject: "This is the subject",                                                
-                        text: "Line 1\nLine 2\nLine 3",
+                        text: "Could you please do this by thursday?\n\nI have an interview.\n\nOn Tue, Sep 9, 2014 at 4:05 PM, Cloudfier Support <\ntodo_Todo-12.test-cloudfier-examples-todo@inbox.cloudfier.com> wrote:\n\n> This is an automated response to your message to\n> todo.test-cloudfier-examples-todo@inbox.cloudfier.com\n>\n> Message successfully processed. Object was created.\n> description: take shoes to repair\n> status: Open\n> Use the URL below to access this object:\n>\n>\n> http://develop.cloudfier.com//kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/test-cloudfier-examples-todo#%2Fentities%2Ftodo.Todo%2Finstances%2F12\n>",
                         headers: {
                             "Message-Id" : "message-id"
                         }   
@@ -185,7 +185,7 @@ suite('EBUI', function() {
             assert.equal("inbox@domain.com", message.account);            
             assert.equal("toEmail@domain.com", message.toEmail);            
             assert.equal("This is the subject", message.subject);                                                            
-            assert.equal("Line 1\nLine 2\nLine 3", message.text);                                                                        
+            assert.equal("Could you please do this by thursday?\n\nI have an interview.", message.text);                                                                        
             assert.equal("message-id", message._contextMessageId);                                                                                    
             assert.equal(204, res.status);            
         });

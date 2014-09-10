@@ -1,5 +1,7 @@
 var https = require("https");
 
+var EmailReplyParser = require("emailreplyparser").EmailReplyParser;
+
 var MandrillGateway = function (mandrillKey, defaultFromEmail, defaultFromName) {
     var self = this;
     
@@ -16,7 +18,7 @@ var MandrillGateway = function (mandrillKey, defaultFromEmail, defaultFromName) 
                 fromName: event.msg.from_name,
                 toEmail: event.msg.to,
                 subject: event.msg.subject,
-                text: event.msg.text,
+                text: EmailReplyParser.parse_reply(event.msg.text),
                 status: 'Pending',
                 // so we can reply in context later
                 _contextMessageId: event.msg.headers['Message-Id']
