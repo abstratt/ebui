@@ -79,7 +79,7 @@ This is still an experiment. What is working:
 - can invoke actions with or without arguments
 - can refer (link) to instances of related entities using their shorthand
 
-Interested? Please join by contributing code, bugs, feature requests etc.
+Interested? Culd you see yourself using this? Please join by contributing code, bugs, feature requests etc.
 
 ### How does it work?
 
