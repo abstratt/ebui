@@ -12,7 +12,7 @@ You can try EBUI against a Cloudfier example application named Ship-it!, a simpl
 
 Send an email like this:
 
-To: issue.test-cloudfier-examples-shipit-plus@inbox.cloudfier.com
+To: issue.demo-cloudfier-examples-shipit-plus@inbox.cloudfier.com
 
 Subject: allow reporting issues via email
 
@@ -28,7 +28,7 @@ Body:
     
 After a while (1 minute), you should get a confirmation message:
 
-    This is an automated response to your message to issue.test-cloudfier-examples-shipit-plus@inbox.cloudfier.com
+    This is an automated response to your message to issue.demo-cloudfier-examples-shipit-plus@inbox.cloudfier.com
     
     Message successfully processed. Object was created.
     
@@ -50,7 +50,7 @@ After a while (1 minute), you should get a confirmation message:
     
     Use this link to edit it:
     
-    http://develop.cloudfier.com//kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/test-cloudfier-examples-shipit-plus#%2Fentities%2Fshipit.Issue%2Finstances%2F59
+    http://develop.cloudfier.com//kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/demo-cloudfier-examples-shipit-plus#%2Fentities%2Fshipit.Issue%2Finstances%2F59
 
 #### Updating an issue
 
