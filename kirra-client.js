@@ -7,7 +7,8 @@ var ebuiUtil = require("./util.js");
 var assert = ebuiUtil.assert;
 var merge = ebuiUtil.merge;
 var util = require('util');
-var Kirra = function (baseUrl, application) {
+
+var Kirra = function (baseUrl, application, runAs) {
     var self = this;
     
     assert(baseUrl, "baseUrl missing");
@@ -27,8 +28,11 @@ var Kirra = function (baseUrl, application) {
           method: method || 'GET',
           headers: { 'content-type': 'application/json' }
         };
+        if (runAs) {
+            options.headers['X-Kirra-RunAs'] = runAs;
+        }
         var deferred = q.defer();
-        console.error(options.method + " " + options.path + " " + JSON.stringify(body || {}));
+        console.error(options.method + " " + options.path + " " + options.headers['X-Kirra-RunAs'] + " " + JSON.stringify(body || {}));
         var start = new Date().getTime()
         var req = http.request(options, function(res) {
             var data = "";
@@ -112,13 +116,19 @@ var Kirra = function (baseUrl, application) {
 	        );
 	    }).then(function(parentInstance) {
 	        if (commentTargetRelationship) {
+	            var commentTargetEntityName = commentTargetRelationship.relationship.typeRef.fullName;
 	            var links = {};
 	            links[commentTargetRelationship.relationship.opposite] = [{uri: parentInstance.uri}];
 	            var values = {};
 	            values[commentTargetRelationship.commentProperty.name] = message.comment;
-	            return self.performRequest('/entities/' + commentTargetRelationship.relationship.typeRef.fullName + '/instances/', 'POST', [201, 200], 
-                    { values: values, links: links }
-                );    
+	            return self.performRequest('/entities/' + commentTargetEntityName + '/instances/_template').then(function (template) {
+	                var mergedValues = merge(merge({}, values), template.values);
+        		    var mergedLinks = merge(merge({}, links), template.links);
+                    return self.performRequest(
+                        '/entities/' + commentTargetEntityName + '/instances/', 'POST', [201, 200], 
+                        { values: mergedValues, links: mergedLinks }
+                    );
+                });    
 	        }
             return parentInstance;
 	    });
@@ -142,11 +152,13 @@ var Kirra = function (baseUrl, application) {
                     var properties = Object.keys(childEntity.properties).map(function (k) { 
                         return childEntity.properties[k]; 
                     });
-                    var requiredProperties = properties.filter(function (p) { 
-                        return p.required && !p.hasDefault; 
-                    });
                     var memoProperties = properties.filter(function (p) { 
                         return p.typeRef.typeName === 'Memo' && p.userVisible && (p.initializable || p.editable); 
+                    });
+                    // TODO valid concern, but needs more work 
+                    /*
+                    var requiredProperties = properties.filter(function (p) { 
+                        return p.required && !p.hasDefault; 
                     });
                     var hasRequiredRelationships = Object.keys(childEntity.relationships).find(function (k) { 
                         return childEntity.relationships[k].required && !(childEntity.relationships[k].typeRef.fullName === parentEntityName); 
@@ -154,13 +166,14 @@ var Kirra = function (baseUrl, application) {
                     if (hasRequiredRelationships) {
                         return finder();
                     }
-                    if (memoProperties.length === 0) {
-                        return finder();
-                    }
                     if (requiredProperties.length > 1) {
                         return finder();
                     }
                     if (requiredProperties.length === 1 && requiredProperties[0].typeRef.typeName !== 'Memo') {
+                        return finder();
+                    }
+                    */
+                    if (memoProperties.length === 0) {
                         return finder();
                     }
                     return { relationship: currentRelationship, commentProperty: memoProperties[0]};          

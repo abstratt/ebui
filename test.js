@@ -9,6 +9,7 @@ var user = process.env.KIRRA_USER || 'test';
 var folder = process.env.KIRRA_FOLDER || 'cloudfier-examples';
 var expensesApplicationId = user + '-'+ folder + '-expenses';
 var todoApplicationId = user + '-'+ folder + '-todo';
+var shipitApplicationId = user + '-'+ folder + '-shipit-plus';
 
 suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
@@ -272,6 +273,35 @@ suite('EBUI', function() {
             }).then(function(instances) {
                 assert.equal(instances.length, 1);
                 assert.equal(instances.contents[0].values['comment'], 'This is just a pointless comment'); 
+            }).then(done, done);
+        });
+        
+        test('processPendingMessage - comment as value - issue tracker app', function(done) {
+            messageStore.saveMessage({ 
+                application : shipitApplicationId, 
+                entity : 'shipit.Issue', 
+                values: { description: "A description", summary: "The summary", project: "Cloudfier issues", reporter: "rperez@cloudfier.com" }
+            }).then(function (creationMessage) {
+                return messageProcessor.processPendingMessage(creationMessage);
+            }).then(function(creationMessage) {
+                assert.equal(creationMessage.status, "Created");
+                return messageStore.saveMessage({
+                    application : creationMessage.application,
+                    entity : creationMessage.entity,
+                    objectId: creationMessage.objectId,
+                    // has to actually match an existing user in the app
+                    fromEmail: "rperez@cloudfier.com", 
+                    text: "This is just a pointless comment"
+                });
+            }).then(function(updateMessage) {
+                return messageProcessor.processPendingMessage(updateMessage);
+            }).then(function(updateMessage) {
+                assert.equal(updateMessage.status, "Updated");
+                var kirra = new Kirra(kirraApiUrl, updateMessage.application);
+                return kirra.getRelatedInstances(updateMessage.entity, updateMessage.objectId, "comments");
+            }).then(function(instances) {
+                assert.equal(instances.length, 1);
+                assert.equal(instances.contents[0].values['commented'], 'This is just a pointless comment'); 
             }).then(done, done);
         });
         
