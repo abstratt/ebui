@@ -1,5 +1,6 @@
 var Kirra = require("./kirra-client.js");
 var MessageProcessor = require("./message-processor.js");
+var Conversation = require("./conversation.js");
 var MessageStore = require("./message-store.js");
 var MandrillGateway = require("./mandrill-gateway.js");
 var util = require('util');
@@ -214,14 +215,17 @@ suite('EBUI', function() {
 
     });
 
+    suite('Conversation', function() {
+        test('makeEmailForInstance', function(){
+            var conversation = new Conversation({}, emailGateway, messageStore, kirra);
+            assert.equal("expenses_Employee-2.myapp@inbox.cloudfier.com", conversation.makeEmailForInstance({entity: 'expenses.Employee', application: 'myapp', objectId: 2}));
+        });
+    });
+
     suite('MessageProcessor', function() {
     
         var messageProcessor = new MessageProcessor(emailGateway, messageStore, kirraBaseUrl, kirraApiUrl);
-        
-        test('makeEmailForInstance', function(){
-            assert.equal("expenses_Employee-2.myapp@inbox.cloudfier.com", messageProcessor.makeEmailForInstance({entity: 'expenses.Employee', application: 'myapp', objectId: 2}));
-        });
-        
+
         test('processPendingMessage - invalid', function(done) {
             messageStore.saveMessage({ }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
@@ -432,6 +436,7 @@ suite('EBUI', function() {
                 return messageProcessor.processPendingMessage(savedMessage);
             }).then(function(m) {
                 assert.equal(m.invocations.length, 2);
+                assert.ok(m.invocationsCompleted);                                                
                 assert.equal(m.invocationsCompleted.length, 2);                                
                 assert.ok(m.invocationsCompleted[0].operation);
                 assert.equal(m.invocationsCompleted[0].operation.name, "submit");
@@ -465,6 +470,7 @@ suite('EBUI', function() {
             }).then(function(m) {
                 assert.equal(Object.keys(m.error).length, 0, util.inspect(m));            
                 assert.equal(m.invocations.length, 1);
+                assert.ok(m.invocationsCompleted);                                                
                 assert.equal(m.invocationsCompleted.length, 1);                                
                 assert.ok(m.invocationsCompleted[0].operation);
                 assert.equal(m.invocationsCompleted[0].operation.name, "declareExpense");
