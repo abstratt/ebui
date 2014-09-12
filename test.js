@@ -16,7 +16,7 @@ suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
     var kirra = new Kirra(kirraApiUrl, expensesApplicationId);
-    this.timeout(30000);
+    this.timeout(40000);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
     var emailGateway = { replyToSender : function(message, userFacingMessage) { 
@@ -24,6 +24,10 @@ suite('EBUI', function() {
         console.error("Email sent: " + util.inspect(notification));
         collectedUserNotifications.push(notification);
     } }; 
+    
+    var checkStatus = function(m, expected) {
+        assert.equal(m.status, expected, JSON.stringify(m.error || ''));
+    };
 
     suite('Kirra Client', function() {
 
@@ -230,7 +234,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.status, "Invalid");
+                checkStatus(m, "Invalid");
             }).then(done, done);
         });
         
@@ -238,7 +242,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : expensesApplicationId, entity : 'expenses.Employee', values: { name: "John Bonham"} }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.status, "Created");
+                checkStatus(m, "Created");
                 assert.equal(m.values.totalSubmitted, 0);
             }).then(done, done);
         });
@@ -247,7 +251,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : todoApplicationId, entity : 'todo.Todo', subject: "Something important", text: "More details" }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.status, "Created");
+                checkStatus(m, "Created");
                 assert.equal(m.values.description, "Something important");
                 assert.equal(m.values.details, "More details");                
             }).then(done, done);
@@ -288,7 +292,7 @@ suite('EBUI', function() {
             }).then(function (creationMessage) {
                 return messageProcessor.processPendingMessage(creationMessage);
             }).then(function(creationMessage) {
-                assert.equal(creationMessage.status, "Created");
+                checkStatus(creationMessage, "Created");
                 return messageStore.saveMessage({
                     application : creationMessage.application,
                     entity : creationMessage.entity,
@@ -300,7 +304,7 @@ suite('EBUI', function() {
             }).then(function(updateMessage) {
                 return messageProcessor.processPendingMessage(updateMessage);
             }).then(function(updateMessage) {
-                assert.equal(updateMessage.status, "Updated");
+                checkStatus(updateMessage, "Updated");
                 var kirra = new Kirra(kirraApiUrl, updateMessage.application);
                 return kirra.getRelatedInstances(updateMessage.entity, updateMessage.objectId, "comments");
             }).then(function(instances) {
@@ -317,7 +321,7 @@ suite('EBUI', function() {
             }).then(function (creationMessage) {
                 return messageProcessor.processPendingMessage(creationMessage);
             }).then(function(creationMessage) {
-                assert.equal(creationMessage.status, "Created");
+                checkStatus(creationMessage, "Created");
                 return messageStore.saveMessage({
                     application : todoApplicationId,
                     entity : 'todo.Todo',
@@ -328,7 +332,7 @@ suite('EBUI', function() {
             }).then(function(updateMessage) {
                 return messageProcessor.processPendingMessage(updateMessage);
             }).then(function(updateMessage) {
-                assert.equal(updateMessage.status, "Updated");
+                checkStatus(updateMessage, "Updated");
                 var kirra = new Kirra(kirraApiUrl, todoApplicationId);
                 return kirra.getRelatedInstances(updateMessage.entity, updateMessage.objectId, "comments");
             }).then(function(instances) {
@@ -364,7 +368,7 @@ suite('EBUI', function() {
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.status, "Created");
+                checkStatus(m, "Created");
                 assert.equal(m.values.description, "Trip to Timbuktu");
                 assert.ok(m.links.category);
                 assert.equal(m.links.category.length, 1);
@@ -379,7 +383,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : expensesApplicationId, entity : 'employee', values: { name: "John Bonham"} }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.status, "Created");
+                checkStatus(m, "Created");
                 assert.equal(m.entity, "expenses.Employee");
             }).then(done, done);
         });
@@ -394,7 +398,7 @@ suite('EBUI', function() {
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.status, "Updated");
+                checkStatus(m, "Updated");
             }).then(done, done);
         });
         
@@ -493,7 +497,7 @@ suite('EBUI', function() {
                 assert.equal(m.values.name, undefined);                                
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.status, "Updated");
+                checkStatus(m, "Updated");
                 assert.equal(m.values.name, "John Moe");                
                 assert.equal(m.values.Name, undefined);                
             }).then(done, done);
@@ -504,7 +508,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : "unknown-app", entity : "namespace.Entity", values: { } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                assert.equal(m.status, "Failure");
+                checkStatus(m, "Failure");
                 assert.ok(m.error);
                 assert.equal(m.error.message, "Project not found: unknown-app");
                 assert.equal(collectedUserNotifications.length, 1, util.inspect(collectedUserNotifications));
@@ -518,7 +522,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : expensesApplicationId, entity : "namespace.Entity", values: { } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                assert.equal(m.status, "Failure");
+                checkStatus(m, "Failure");
                 assert.ok(m.error);
                 assert.equal(m.error.message, "Entity not found: namespace.Entity");
             }).then(done, done);
@@ -528,7 +532,7 @@ suite('EBUI', function() {
             messageStore.saveMessage({ application : expensesApplicationId, entity : "expenses.Employee", objectId: "-1", values: { name: "Some Name" } }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
-                assert.equal(m.status, "Failure");
+                checkStatus(m, "Failure");
                 assert.ok(m.error);
                 assert.equal(m.error.message, "Instance not found");
             }).then(done, done);
@@ -543,7 +547,7 @@ suite('EBUI', function() {
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
-                assert.equal(m.status, "Failure");
+                checkStatus(m, "Failure");
                 assert.ok(m.error);
                 assert.equal(m.error.message, "A value is required for Name");
             }).then(done, done);

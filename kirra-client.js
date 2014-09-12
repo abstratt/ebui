@@ -66,123 +66,6 @@ var Kirra = function (baseUrl, application, runAs) {
         var requestUrl = self.baseUrl + self.application + path;	        
         return self.performRequestOnURL(requestUrl, method, expectedStatus, body);
     };
-    
-    self.createInstance = function(message) {
-        var template;
-        var entity;
-        return self.getInstanceTemplate(message).then(function (t) { 
-            template = t;
-            return self.getEntity(message.entity);
-        }).then(function(e) {
-            entity = e;
-            for (var p in entity.properties) {
-                // fill in an unfulfilled required string property with the subject line if needed
-                if (message.subject && !message.values[p] && !template.values[p] && entity.properties[p].typeRef.typeName === "String" && entity.properties[p].required && !entity.properties[p].hasDefault && entity.properties[p].editable) {
-                    message.values[p] = message.subject;
-                    break;
-                }
-            }
-            for (var p in entity.properties) {
-                // fill in an unfulfilled required memo property with the email comment if needed
-                if (message.comment && !message.values[p] && !template.values[p] && entity.properties[p].typeRef.typeName === "Memo" && entity.properties[p].required && !entity.properties[p].hasDefault && entity.properties[p].editable) {
-                    message.values[p] = message.comment;
-                    break;
-                }
-            }
-            return message;
-        }).then(function (message) {
-		    var mergedValues = merge(merge({}, message.values), template.values);
-		    var mergedLinks = merge(merge({}, message.links), template.links);
-            return self.performRequest('/entities/' + message.entity + '/instances/', 'POST', [201, 200], 
-                { values: mergedValues, links: mergedLinks }
-            );
-	    });
-    };
-
-    self.updateInstance = function(message) {
-        var instance;
-        var commentTargetRelationship;
-        return self.getInstance(message).then(function (i) {
-            instance = i;
-            return message.comment ? self.findCommentTargetChildRelationship(message.entity) : undefined;
-        }).then(function (childRelationship) {
-            commentTargetRelationship = childRelationship;
-            return message;
-        }).then(function (message) {
-		    var mergedValues = merge(merge({}, message.values), instance.values);
-		    var mergedLinks = merge(merge({}, message.links), instance.links);
-		    return self.performRequest('/entities/' + message.entity + '/instances/' + message.objectId, 'PUT', 200, 
-		        { values: mergedValues, links: mergedLinks }
-	        );
-	    }).then(function(parentInstance) {
-	        if (commentTargetRelationship) {
-	            var commentTargetEntityName = commentTargetRelationship.relationship.typeRef.fullName;
-	            var links = {};
-	            links[commentTargetRelationship.relationship.opposite] = [{uri: parentInstance.uri}];
-	            var values = {};
-	            values[commentTargetRelationship.commentProperty.name] = message.comment;
-	            return self.performRequest('/entities/' + commentTargetEntityName + '/instances/_template').then(function (template) {
-	                var mergedValues = merge(merge({}, values), template.values);
-        		    var mergedLinks = merge(merge({}, links), template.links);
-                    return self.performRequest(
-                        '/entities/' + commentTargetEntityName + '/instances/', 'POST', [201, 200], 
-                        { values: mergedValues, links: mergedLinks }
-                    );
-                });    
-	        }
-            return parentInstance;
-	    });
-    };
-    
-    self.findCommentTargetChildRelationship = function (parentEntityName) {
-        return self.getEntity(parentEntityName).then(function (e) {
-            var childRelationships = Object.keys(e.relationships).map(function (k) { 
-                return e.relationships[k]; 
-            }).filter(function (r) {
-                return r.style === "CHILD"
-            });
-            // now find the first child relationship that has a comment-like entity 
-            // (only required field is a Memo field or there are no required fields and there is at least one Memo field)
-            var finder = function () {
-                var currentRelationship = childRelationships.shift();
-                if (!currentRelationship) {
-                    return q.thenResolve(undefined);
-                }
-                return self.getEntity(currentRelationship.typeRef.fullName).then(function(childEntity) {
-                    var properties = Object.keys(childEntity.properties).map(function (k) { 
-                        return childEntity.properties[k]; 
-                    });
-                    var memoProperties = properties.filter(function (p) { 
-                        return p.typeRef.typeName === 'Memo' && p.userVisible && (p.initializable || p.editable); 
-                    });
-                    // TODO valid concern, but needs more work 
-                    /*
-                    var requiredProperties = properties.filter(function (p) { 
-                        return p.required && !p.hasDefault; 
-                    });
-                    var hasRequiredRelationships = Object.keys(childEntity.relationships).find(function (k) { 
-                        return childEntity.relationships[k].required && !(childEntity.relationships[k].typeRef.fullName === parentEntityName); 
-                    });
-                    if (hasRequiredRelationships) {
-                        return finder();
-                    }
-                    if (requiredProperties.length > 1) {
-                        return finder();
-                    }
-                    if (requiredProperties.length === 1 && requiredProperties[0].typeRef.typeName !== 'Memo') {
-                        return finder();
-                    }
-                    */
-                    if (memoProperties.length === 0) {
-                        return finder();
-                    }
-                    return { relationship: currentRelationship, commentProperty: memoProperties[0]};          
-                });
-            };
-            return finder();
-        });
-    };
-
     self.getApplication = function() {
         return self.performRequest('', undefined, 200);
     };
@@ -217,9 +100,6 @@ var Kirra = function (baseUrl, application, runAs) {
         });
     };
 
-    self.getInstance = function(message) {
-        return self.performRequest('/entities/' + message.entity + '/instances/' + message.objectId, undefined, 200);
-    };
     
     self.invokeOperation = function(objectId, operation, arguments) {
         return self.performRequest('/entities/' + operation.owner.fullName + '/instances/' + objectId + '/actions/' + operation.name, 'POST', 200, arguments);
@@ -240,10 +120,40 @@ var Kirra = function (baseUrl, application, runAs) {
     self.getRelatedInstances = function(entity, objectId, relationshipName) {
         return self.performRequest('/entities/' + entity + '/instances/' + objectId + '/relationships/' + relationshipName + '/', undefined, 200);
     };
-
-    self.getInstanceTemplate = function(message) {
-        return self.performRequest('/entities/' + message.entity + '/instances/_template', undefined, 200);
+    
+    self.getInstanceTemplate = function(entity) {
+        if (typeof(entity) === 'object') {
+            entity = entity.entity;
+        }
+        return self.performRequest('/entities/' + entity + '/instances/_template', undefined, 200);
     };
+
+    self.getInstance = function(entity, objectId) {
+        if (typeof(entity) === 'object') {
+            objectId = entity.objectId;
+            entity = entity.entity;
+        }
+        return self.performRequest('/entities/' + entity + '/instances/' + objectId, undefined, 200);
+    };
+
+    self.createInstance = function(entity, values, links) {
+        if (typeof(entity) === 'object') {
+            values = entity.values;
+            links = entity.links;
+            entity = entity.entity;
+        }
+        return self.performRequest('/entities/' + entity + '/instances/', 'POST', [201, 200], { values: values, links: links });
+    };
+    self.updateInstance = function(entity, objectId, values, links) {
+        if (typeof(entity) === 'object') {
+            objectId = entity.objectId;        
+            values = entity.values;
+            links = entity.links;
+            entity = entity.entity;
+        }
+        return self.performRequest('/entities/' + entity + '/instances/' + objectId, 'PUT', 200, { values: values, links: links });
+    };
+    
     
     return self;
 };
