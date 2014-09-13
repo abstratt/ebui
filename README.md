@@ -6,7 +6,7 @@ EBUI is an Email-Based User Interface for business applications. It acts as a tr
 
 ### Try it!
 
-You can try EBUI against a Cloudfier example application named Ship-it!, a simple issue tracking application.
+You can try EBUI against a Cloudfier example application named [Ship-it!](https://bitbucket.org/abstratt/cloudfier-examples/src/master/shipit/?at=master), a simple issue tracking application.
 
 #### Creating an issue
 
@@ -68,6 +68,65 @@ Reply to the creation confirmation message with these contents:
     
 
 which will change the severity to Enhancement, link to an existing label "bountyavailable" and add a child Comment instance to the Issue instance.
+
+#### Generating a report
+
+This example is against a different application, an expense tracking app (described [here](https://bitbucket.org/abstratt/cloudfier-examples/src/master/expenses/?at=master)).
+
+Send an email like this:
+
+To: expense-report.demo-cloudfier-examples-expenses@inbox.cloudfier.com
+
+Subject: find expenses by category
+
+Body:
+
+    --
+    category: Meal
+    --
+
+After a while, you should get the report, which currently is a concatenation of the user-friendly representation of each instance matching the query:
+
+    This is an automated response to your message to
+    expense-report.demo-cloudfier-examples-expenses@inbox.cloudfier.com
+    
+    Record(s) found: 2
+    
+    --------------------------
+    
+    
+    
+    Moniker: Lunch in LA on 2012/09/14
+    Description: Lunch in LA
+    Status: Submitted
+    Amount: 35.75
+    Date: 2012-09-14T00:00Z
+    Expense Id: 20
+    Automatic Approval: true
+    Days Processed: 0
+    Category: Meal
+    Employee: Camille Jouel
+    
+    Use this link to view it:
+    
+    http://develop.cloudfier.com/services/api-v2//kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/demo-cloudfier-examples-expenses#%2Fentities%2Fexpenses.Expense%2Finstances%2F19
+    
+    --------------------------
+    
+    Moniker: Lunch at subway on 2012/09/13
+    Description: Lunch at subway
+    Status: Rejected
+    Amount: 20.5
+    Date: 2012-09-13T00:00Z
+    Expense Id: 26
+    Automatic Approval: true
+    Days Processed: 0
+    Category: Meal
+    Employee: John Ford
+    
+    Use this link to view it:
+    
+    http://develop.cloudfier.com/services/api-v2//kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/demo-cloudfier-examples-expenses#%2Fentities%2Fexpenses.Expense%2Finstances%2F25
 
 ### Status
 
