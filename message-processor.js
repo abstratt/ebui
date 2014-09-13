@@ -63,7 +63,11 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         var elements = /^([a-z_A-Z]+)(?:-([^.]+))?\.([^@^.]+)@.*$/.exec(message.account);
         if (elements !== null) {
             message.entity = elements[1].replace("_", ".");
-            message.objectId = elements[2];
+            if (isNaN(elements[2])) {
+                message.query = elements[2];
+            } else {
+                message.objectId = elements[2];            
+            }
             message.application = elements[3];
         }
         return message;

@@ -30,14 +30,15 @@ var MandrillGateway = function (mandrillKey, defaultFromEmail, defaultFromName) 
         return res.send(204);
     };
     
-    self.replyToSender = function(message, body, senderEmail) {
+    self.replyToSender = function(message, body, senderEmail, subject) {
+        subject = subject || (message.subject && message.subject.indexOf("Re:") === -1) ? ("Re: "+ message.subject) : message.subject;
         var payload = {
             key : mandrillKey,
             message: {
                 text: "This is an automated response to your message to "+ message.account + "\n\n" + body,
                 from_email: senderEmail || defaultFromEmail,
                 from_name: defaultFromName,
-                subject: (message.subject && message.subject.indexOf("Re:") === -1) ? ("Re: "+ message.subject) : message.subject,
+                subject: subject,
                 to: [{
                     email: message.fromEmail,     
                     name: message.fromName,

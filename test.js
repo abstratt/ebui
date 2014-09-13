@@ -16,11 +16,11 @@ suite('EBUI', function() {
     var kirraBaseUrl = process.env.KIRRA_BASE_URL || "http://develop.cloudfier.com/";
     var kirraApiUrl = process.env.KIRRA_API_URL || (kirraBaseUrl + "services/api-v2/");
     var kirra = new Kirra(kirraApiUrl, expensesApplicationId);
-    this.timeout(40000);
+    this.timeout(999999999);
     var messageStore = new MessageStore('localhost', 27017, 'testdb', '', '');
     var collectedUserNotifications = [];
-    var emailGateway = { replyToSender : function(message, userFacingMessage) { 
-        var notification = { userFacingMessage: userFacingMessage, message: message };
+    var emailGateway = { replyToSender : function(message, userFacingMessage, senderEmail, subject) { 
+        var notification = { userFacingMessage: userFacingMessage, message: message, senderEmail: senderEmail, subject: subject };
         console.error("Email sent: " + util.inspect(notification));
         collectedUserNotifications.push(notification);
     } }; 
@@ -379,6 +379,59 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
+        test('processPendingMessage - report expenses by category', function(done) {
+            var category, employee;
+            collectedUserNotifications = [];
+            kirra.createInstance({
+                entity: 'expenses.Category', 
+                values: { name: "Totally different category" + Math.random() }
+            }).then(function(instance) {
+                category = instance;
+                return kirra.createInstance({
+                    entity: 'expenses.Employee', 
+                    values: { name: "A new employee" + Math.random() }
+                });
+            }).then(function(instance) {
+                employee = instance;
+                var values = {
+                    description: "Expense 1", 
+                    amount: 100, 
+                    date: "2014/09/21"
+                }
+                var links = { 
+                    category: [{ uri: category.uri }],
+                    employee: [{ uri: employee.uri }] 
+                };
+                // create two instances
+                return kirra.createInstance({
+                    entity: 'expenses.Expense', 
+                    values: values,
+                    links: links,                    
+                }).then(function() { 
+                    values.description = "Expense 2";
+                    return kirra.createInstance({
+                        entity: 'expenses.Expense', 
+                        values: values,
+                        links: links,                    
+                    });
+                });
+            }).then(function(instance) {
+                return messageStore.saveMessage({
+                    application : expensesApplicationId,
+                    entity: 'expenses.Expense',
+                    query: "findExpensesByCategory",
+                    values: { category: category.values.name }
+                });                    
+            }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                checkStatus(m, "Processed");
+                assert.equal(collectedUserNotifications.length, 1);
+                assert.equal(collectedUserNotifications[0].subject, "Find Expenses By Category");             
+            }).then(done, done);
+        });
+
+        
         test('processPendingMessage - creation with incomplete entity', function(done) {
             messageStore.saveMessage({ application : expensesApplicationId, entity : 'employee', values: { name: "John Bonham"} }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
@@ -512,7 +565,7 @@ suite('EBUI', function() {
                 assert.ok(m.error);
                 assert.equal(m.error.message, "Project not found: unknown-app");
                 assert.equal(collectedUserNotifications.length, 1, util.inspect(collectedUserNotifications));
-                assert.equal(collectedUserNotifications[0].userFacingMessage, "Invalid application. Reason: Project not found: unknown-app");
+                assert.equal(collectedUserNotifications[0].userFacingMessage, "Error processing message. Reason: Project not found: unknown-app");
                 assert.ok(m._id);                
                 assert.equal(m._id, collectedUserNotifications[0].message._id, util.inspect(collectedUserNotifications[0].message));
             }).then(done, done);

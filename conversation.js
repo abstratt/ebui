@@ -55,6 +55,9 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
                             promise = promise.then(function () {
                                 return linkResolvers.shift();
                             }).then(function(result) {
+                                if (result.matching.length === 0) {
+                                    throw new Error("Could not resolve reference: " + result.context.label + " = " + result.value); 
+                                }
                                 links[result.context.name] = [{ uri: result.matching[0].uri }];
                             });
                             continue message_values;
@@ -87,6 +90,9 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
                                             return argumentResolvers.shift();
                                         }).then(function(result) {
                                             // finally resolve the reference
+                                            if (result.matching.length === 0) {
+                                                throw new Error("Could not resolve argument: " + result.context.argumentName + " = " + result.value);
+                                            }
                                             invocations[result.context.invocationIndex].arguments[result.context.argumentName] = { uri: result.matching[0].uri };
                                         });
                                     }
@@ -105,13 +111,12 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
                 return messageStore.saveMessage(message); 
             });
         }).then(function(message) {
-            return (message.objectId ? 
-                self.processUpdateMessage(message) :
-                self.processCreationMessage(message)
+            return message.objectId ? self.processUpdateMessage(message) : (
+                message.query ? self.processQueryMessage(message) : self.processCreationMessage(message)
             );
         }).then(function () { 
             return self.invokePendingActions(message); 
-        }, self.onError(message, "Invalid application."));
+        }, self.onError(message, "Error processing message."));
     };
 
     
@@ -186,22 +191,56 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
         }, self.onError(message, "Error processing your message, object not updated."));
     };
     
-    self.replyToSender = function(message, body, senderEmail) {
-        emailGateway.replyToSender(message, body, senderEmail);
+    self.processQueryMessage = function(message) {
+        var query;
+        var entity;
+        return kirra.getExactEntity(message.entity).then(function (found) {
+            entity = found;
+            query = Object.keys(entity.operations).map(function(k) { return entity.operations[k]; }).find(function(op) {
+                return !op.instanceOperation && op.kind === "Finder" && 
+                    (op.name.toUpperCase() === message.query.toUpperCase()) || 
+                    (op.label.toUpperCase() === message.query.toUpperCase());
+            });
+            if (!query) {
+                throw new Error("No query '"+ message.query + " in entity '" + entity.label + "'");
+            }
+            return kirra.findInstances(message.entity, message.query, merge(merge({}, message.values), message.links));
+        }).then(function (found) {
+            var subject = query.label;
+            var userFriendlyData = found.contents.map(function(it) {
+                return self.printUserFriendlyInstance(entity, it) + "\n\n" + "Use this link to view it:\n\n" + self.makeLinkForInstance(message, it);
+            });
+            var dataString = userFriendlyData.join("\n\n--------------------------\n\n");
+            var body = "Record(s) found: " + found.length + "\n" + dataString;
+            self.replyToSender(message, body, self.makeEmailForInstance(message), subject);
+            message.status = "Processed";
+            return messageStore.saveMessage(message);
+        }, self.onError(message, "Error processing your message, query could not be performed."));
+    };
+    
+    self.makeLinkForInstance = function(message, instance) {
+        return kirra.baseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
+            message.application + '#' + encodeURIComponent('/entities/' + message.entity + '/instances/' + instance.objectId);
+    };
+
+    
+    self.replyToSender = function(message, body, senderEmail, subject) {
+        emailGateway.replyToSender(message, body, senderEmail, subject);
     };
     
     self.sendMessageWithLink = function(message, entity, instance, userMessage) {
         self.replyToSender(message, userMessage + "\n" + self.printUserFriendlyInstance(entity, instance) +
-            "\n\n-------------------------------\n\nUse this link to edit it:\n\n" +
-            kirra.baseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
-            message.application + '#' + encodeURIComponent('/entities/' + message.entity + '/instances/' + message.objectId), self.makeEmailForInstance(message));
+            "\n\n-------------------------------\n\n" + "Use this link to view it:\n\n" + self.makeLinkForInstance(entity, instance), self.makeEmailForInstance(message));
     };
     
     self.onError = function(message, errorMessage) {
         return function (e) {
-            console.error(e);
             message.status = "Failure";
             message.error = e;
+            console.error(e);
+            if (e.stack) {
+                console.error(e.stack);
+            }
             return messageStore.saveMessage(message).then(function(savedMessage) {
                 var reason = typeof(e.message) !== 'object' ? e.message : yaml.safeDump(e.message);
                 self.replyToSender(savedMessage, errorMessage + " Reason: " + reason);
@@ -240,7 +279,7 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
             var filter = {};
             filter[entity.properties[Object.keys(entity.properties)[0]].name] = value; 
             return kirra.getInstances(entityName, filter).then(function(instances) { 
-                return { matching: instances.contents, context: context }; 
+                return { matching: instances.contents, context: context, value: value }; 
             });
         });
     };

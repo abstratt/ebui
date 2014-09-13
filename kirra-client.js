@@ -39,6 +39,7 @@ var Kirra = function (baseUrl, application, runAs) {
             res.on('data', function(chunk) {
                 data += chunk.toString();
             }).on('end', function() {
+                console.error("Raw response: ", data);
                 var parsed = JSON.parse(data);
                 if ((typeof expectedStatus === 'number' && expectedStatus !== res.statusCode) || 
                     (typeof expectedStatus === 'object' && expectedStatus.indexOf(res.statusCode) === -1)) {
@@ -106,6 +107,11 @@ var Kirra = function (baseUrl, application, runAs) {
     };
 
     self.getInstances = function(entity, filter) {
+        var filterQuery = self.buildFilterQuery(filter);
+        return self.performRequest('/entities/' + entity + '/instances/' + filterQuery, undefined, 200);
+    };
+    
+    self.buildFilterQuery = function (filter) {
         var filterQuery = "?";
         if (filter) {
             var terms = [];
@@ -114,11 +120,15 @@ var Kirra = function (baseUrl, application, runAs) {
             }
             filterQuery += terms.join("&");
         }
-        return self.performRequest('/entities/' + entity + '/instances/' + filterQuery, undefined, 200);
+        return filterQuery;
     };
     
     self.getRelatedInstances = function(entity, objectId, relationshipName) {
         return self.performRequest('/entities/' + entity + '/instances/' + objectId + '/relationships/' + relationshipName + '/', undefined, 200);
+    };
+    
+    self.findInstances = function(entity, queryName, arguments) {
+        return self.performRequest('/entities/' + entity + '/finders/' + queryName, 'POST', 200, arguments);
     };
     
     self.getInstanceTemplate = function(entity) {
