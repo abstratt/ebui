@@ -40,13 +40,13 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
                 var argumentResolvers = [];                
                 message_values: for (var key in message.values) {
                     entity_properties: for (var property in entity.properties) {
-                        if (ebutil.similarString(key, entity.properties[property], ["name", "label"])) {
+                        if (ebuiUtil.similarString(key, entity.properties[property], ["name", "label"])) {
                             values[entity.properties[property].name] = message.values[key];
                             continue message_values;
                         }
                     }
                     entity_relationships: for (var r in entity.relationships) {
-                        if (ebutil.similarString(key, entity.relationships[r], ["name", "label"])) {
+                        if (ebuiUtil.similarString(key, entity.relationships[r], ["name", "label"])) {
                             linkResolvers.push(self.resolveLooseReference(
                                     entity.relationships[r].typeRef.fullName,
                                     message.values[key],
@@ -65,7 +65,7 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
                     }
                     entity_actions: for (var o in entity.operations) {
                         var operation = entity.operations[o];
-                        if (ebutil.similarString(key, operation, ["name", "label"])) {
+                        if (ebuiUtil.similarString(key, operation, ["name", "label"])) {
                             var invocation = { operation: operation, arguments: message.values[key] };
                             invocations.push(invocation);
                             if (operation.parameters && operation.parameters.length) {
@@ -197,12 +197,12 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
         return kirra.getExactEntity(message.entity).then(function (found) {
             entity = found;
             query = Object.keys(entity.operations).map(function(k) { return entity.operations[k]; }).find(function(op) {
-                return !op.instanceOperation && op.kind === "Finder" && ebutil.similarString(message.query, op, ["name", "label"]);
+                return !op.instanceOperation && op.kind === "Finder" && ebuiUtil.similarString(message.query, op, ["name", "label"]);
             });
             if (!query) {
                 throw new Error("No query '"+ message.query + " in entity '" + entity.label + "'");
             }
-            return kirra.findInstances(message.entity, message.query, merge(merge({}, message.values), message.links));
+            return kirra.findInstances(message.entity, query.name, merge(merge({}, message.values), message.links));
         }).then(function (found) {
             var subject = query.label;
             var userFriendlyData = found.contents.map(function(it) {

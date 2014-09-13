@@ -3,6 +3,7 @@ var MessageProcessor = require("./message-processor.js");
 var Conversation = require("./conversation.js");
 var MessageStore = require("./message-store.js");
 var MandrillGateway = require("./mandrill-gateway.js");
+var ebuiUtil = require('./util.js');
 var util = require('util');
 
 var assert = require("assert");
@@ -28,6 +29,13 @@ suite('EBUI', function() {
     var checkStatus = function(m, expected) {
         assert.equal(m.status, expected, JSON.stringify(m.error || ''));
     };
+
+    suite('ebuiUtil', function() {
+        test('similarString', function() {
+            assert.ok(ebuiUtil.similarString("foo bar", { name: "fooBar" }, ["name", "label"]));
+            assert.ok(ebuiUtil.similarString("find Expenses By Category", { label: "Find Expenses By Category", name: "findExpensesByCategory" }, ["name", "label"]));            
+        });
+    });
 
     suite('Kirra Client', function() {
 
