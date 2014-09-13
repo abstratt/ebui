@@ -64,7 +64,9 @@ var MessageProcessor = function (emailGateway, messageStore, kirraBaseUrl, kirra
         if (elements !== null) {
             message.entity = elements[1].replace("_", ".");
             if (isNaN(elements[2])) {
-                message.query = elements[2];
+                if (elements[2] === 'report') {
+                    message.query = message.subject;
+                }
             } else {
                 message.objectId = elements[2];            
             }

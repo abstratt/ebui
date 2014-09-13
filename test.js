@@ -33,7 +33,6 @@ suite('EBUI', function() {
     suite('ebuiUtil', function() {
         test('similarString', function() {
             assert.ok(ebuiUtil.similarString("foo bar", { name: "fooBar" }, ["name", "label"]));
-            assert.ok(ebuiUtil.similarString("find Expenses By Category", { label: "Find Expenses By Category", name: "findExpensesByCategory" }, ["name", "label"]));            
         });
     });
 
@@ -617,23 +616,39 @@ suite('EBUI', function() {
         test('parseMessage - entity account', function() {
             var message = { 
                 account : 'namespace_Entity.myapplication@domain',
-                text: 'This is a message'
+                text: 'This is a message',
+                subject: 'this is a subject'
             };
             messageProcessor.parseMessage(message);
             assert.equal(message.application, "myapplication");
             assert.equal(message.entity, "namespace.Entity");
             assert.equal(message.objectId, undefined);
+            assert.equal(message.query, undefined);
         });
         
         test('parseMessage - instance account', function() {
             var message = { 
                 account : 'namespace_Entity-1234.myapplication@domain',
-                text: 'This is a message'
+                text: 'This is a message',
+                subject: 'this is a subject'
             };
             messageProcessor.parseMessage(message);
             assert.equal(message.application, "myapplication");
             assert.equal(message.entity, "namespace.Entity");
             assert.equal(message.objectId, '1234');
+        });
+        
+        test('parseMessage - query', function() {
+            var message = { 
+                account : 'namespace_Entity-report.myapplication@domain',
+                text: 'This is a message',
+                subject: 'This is a query'
+            };
+            messageProcessor.parseMessage(message);
+            assert.equal(message.application, "myapplication");
+            assert.equal(message.entity, "namespace.Entity");
+            assert.equal(message.query, "This is a query");
+            assert.equal(message.objectId, undefined);
         });
         
         test('parseMessage - values', function() {
