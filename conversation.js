@@ -209,7 +209,7 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
                 return self.printUserFriendlyInstance(entity, it) + "\n\n" + "Use this link to view it:\n\n" + self.makeLinkForInstance(message, it);
             });
             var dataString = userFriendlyData.join("\n\n--------------------------\n\n");
-            var body = "Record(s) found: " + found.length + "\n" + dataString;
+            var body = "Record(s) found: " + found.length + "\n\n--------------------------\n\n" + dataString;
             self.replyToSender(message, body, self.makeEmailForInstance(message), subject);
             message.status = "Processed";
             return messageStore.saveMessage(message);
