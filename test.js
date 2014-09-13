@@ -419,7 +419,7 @@ suite('EBUI', function() {
                 return messageStore.saveMessage({
                     application : expensesApplicationId,
                     entity: 'expenses.Expense',
-                    query: "findExpensesByCategory",
+                    query: "find Expenses By Category",
                     values: { category: category.values.name }
                 });                    
             }).then(function (m) {

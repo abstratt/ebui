@@ -5,6 +5,13 @@ exports.assert = function(condition, message) {
         throw Error("Assert failed" + (typeof message !== "undefined" ? ": " + message : ""));
 };
 
+exports.similarString = function(toMatch, object, properties) {
+    toMatch = toMatch.replace(/ /g, "").toUpperCase();
+    return properties.find(function(prop) {
+        return object[prop].replace(/ /g, "").toUpperCase() === toMatch;
+    }) !== undefined;
+};
+
 exports.merge = function (obj1, obj2) {
     for (var key in obj2) {
         if (obj1[key] === undefined) {
