@@ -217,7 +217,8 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
     };
     
     self.makeLinkForInstance = function(message, instance) {
-        return kirra.baseUrl + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
+        var parsedUrl = url.parse(kirra.baseUrl);
+        return parsedUrl.protocol + '//' + parsedUrl.host + '/kirra-api/kirra_qooxdoo/build/?app-path=/services/api-v2/' + 
             message.application + '#' + encodeURIComponent('/entities/' + message.entity + '/instances/' + instance.objectId);
     };
 
@@ -228,7 +229,7 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
     
     self.sendMessageWithLink = function(message, entity, instance, userMessage) {
         self.replyToSender(message, userMessage + "\n" + self.printUserFriendlyInstance(entity, instance) +
-            "\n\n-------------------------------\n\n" + "Use this link to view it:\n\n" + self.makeLinkForInstance(entity, instance), self.makeEmailForInstance(message));
+            "\n\n-------------------------------\n\n" + "Use this link to view it:\n\n" + self.makeLinkForInstance(message, instance), self.makeEmailForInstance(message));
     };
     
     self.onError = function(message, errorMessage) {
