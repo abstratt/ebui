@@ -202,7 +202,7 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
         return Object.keys(userEntity.properties).map(function(k) {
             return userEntity.properties[k];
         }).find(function (property) {
-            return property.unique && !property.editable && property.initializable;
+            return property.unique && !property.editable && property.initializable && property.typeRef.typeName === "String";
         });
     };
     
@@ -210,7 +210,7 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
         return Object.keys(userEntity.properties).map(function(k) {
             return userEntity.properties[k];
         }).find(function (property) {
-            return !property.unique && property.required && property.editable;
+            return property.required && property.editable && property.typeRef.typeName === "String";
         });
     };
     

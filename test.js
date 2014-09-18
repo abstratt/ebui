@@ -238,7 +238,9 @@ suite('EBUI', function() {
         var messageProcessor = new MessageProcessor(emailGateway, messageStore, kirraBaseUrl, kirraApiUrl);
 
         test('processPendingMessage - invalid', function(done) {
-            messageStore.saveMessage({ }).then(function (m) {
+            messageStore.saveMessage({
+                fromEmail: "foo@bar.com", fromName: "Foo Bar"
+            }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 checkStatus(m, "Invalid");
@@ -246,7 +248,11 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - simple creation', function(done) {
-            messageStore.saveMessage({ application : expensesApplicationId, entity : 'expenses.Employee', values: { name: "John Bonham"} }).then(function (m) {
+            messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                application : expensesApplicationId, entity : 'expenses.Employee', 
+                values: { name: "John Bonham"} 
+            }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 checkStatus(m, "Created");
@@ -255,7 +261,11 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - using subject', function(done) {
-            messageStore.saveMessage({ application : todoApplicationId, entity : 'todo.Todo', subject: "Something important", text: "More details" }).then(function (m) {
+            messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                application : todoApplicationId, entity : 'todo.Todo', 
+                subject: "Something important", text: "More details" 
+            }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 checkStatus(m, "Created");
@@ -278,6 +288,7 @@ suite('EBUI', function() {
         
         test('processPendingMessage - comment as value', function(done) {
             messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
                 application : todoApplicationId, 
                 entity : 'todo.Todo', 
                 values: { description: "A description", details: "The details" }
@@ -286,6 +297,7 @@ suite('EBUI', function() {
             }).then(function(creationMessage) {
                 assert.equal(creationMessage.status, "Created");
                 return messageStore.saveMessage({
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",
                     application : todoApplicationId,
                     entity : 'todo.Todo',
                     objectId: creationMessage.objectId, 
@@ -304,7 +316,8 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - comment as value - issue tracker app', function(done) {
-            messageStore.saveMessage({ 
+            messageStore.saveMessage({
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
                 application : shipitApplicationId, 
                 entity : 'shipit.Issue', 
                 values: { description: "A description", summary: "The summary", project: "Cloudfier issues", reporter: "rperez@cloudfier.com" }
@@ -313,6 +326,7 @@ suite('EBUI', function() {
             }).then(function(creationMessage) {
                 checkStatus(creationMessage, "Created");
                 return messageStore.saveMessage({
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",
                     application : creationMessage.application,
                     entity : creationMessage.entity,
                     objectId: creationMessage.objectId,
@@ -334,6 +348,7 @@ suite('EBUI', function() {
         
         test('processPendingMessage - updating without a comment', function(done) {
             messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
                 application : todoApplicationId, 
                 entity : 'todo.Todo', 
                 values: { description: "A description", details: "The details" }
@@ -342,6 +357,7 @@ suite('EBUI', function() {
             }).then(function(creationMessage) {
                 checkStatus(creationMessage, "Created");
                 return messageStore.saveMessage({
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",                
                     application : todoApplicationId,
                     entity : 'todo.Todo',
                     objectId: creationMessage.objectId,
@@ -380,6 +396,7 @@ suite('EBUI', function() {
                     employee: employee.values.name 
                 };
                 return messageStore.saveMessage({
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",
                     application : expensesApplicationId,
                     entity: 'expenses.Expense', 
                     values: values
@@ -436,6 +453,7 @@ suite('EBUI', function() {
                 });
             }).then(function(instance) {
                 return messageStore.saveMessage({
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",
                     application : expensesApplicationId,
                     entity: 'expenses.Expense',
                     query: "find Expenses By Category",
@@ -452,7 +470,11 @@ suite('EBUI', function() {
 
         
         test('processPendingMessage - creation with incomplete entity', function(done) {
-            messageStore.saveMessage({ application : expensesApplicationId, entity : 'employee', values: { name: "John Bonham"} }).then(function (m) {
+            messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                application : expensesApplicationId, entity : 'employee', 
+                values: { name: "John Bonham"} 
+            }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
                 checkStatus(m, "Created");
@@ -465,7 +487,11 @@ suite('EBUI', function() {
                 entity: 'expenses.Employee', 
                 values: { name: "John Doe" }
             }).then(function(instance) {
-                var message = { objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', values: instance.values };
+                var message = { 
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                    objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', 
+                    values: instance.values 
+                };
                 return messageStore.saveMessage(message).then(function() { return message; });
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
@@ -505,8 +531,11 @@ suite('EBUI', function() {
             }).then(function (instance) {
                 expense = instance;
                 assert.equal(expense.values.status, "Draft");    
-                var message = { objectId: expense.objectId, application : expensesApplicationId, entity : expense.typeRef.fullName, 
-                    values: { submit: undefined, reject: "expense not allowed" } };
+                var message = { 
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                    objectId: expense.objectId, application : expensesApplicationId, entity : expense.typeRef.fullName, 
+                    values: { submit: undefined, reject: "expense not allowed" } 
+                };
                 return messageStore.saveMessage(message);
             }).then(function(savedMessage) { 
                 return messageProcessor.processPendingMessage(savedMessage);
@@ -539,7 +568,11 @@ suite('EBUI', function() {
             }).then(function(instance) {
                 employee = instance;
                 var values = { declareExpense: { description: "Trip to Timbuktu", amount: 205.45, date: "2014/09/21", category: category.values.name }  };
-                var message = { objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', values: values };
+                var message = { 
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                    objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', 
+                    values: values
+                };
                 return messageStore.saveMessage(message).then(function() { return message; });
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
@@ -562,7 +595,11 @@ suite('EBUI', function() {
                 entity: 'expenses.Employee', 
                 values: { name: "John Doe" }
             }).then(function(instance) {
-                var message = { objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', values: { Name : 'John Moe' } };
+                var message = { 
+                    fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                    objectId: instance.objectId, application : expensesApplicationId, entity : 'expenses.Employee', 
+                    values: { Name : 'John Moe' } 
+                };
                 return messageStore.saveMessage(message).then(function() { return message; });
             }).then(function (m) {
                 assert.equal(m.values.Name, "John Moe");                
@@ -577,7 +614,10 @@ suite('EBUI', function() {
         
         test('processPendingMessage - unknown application', function(done) {
             collectedUserNotifications = [];
-            messageStore.saveMessage({ application : "unknown-app", entity : "namespace.Entity", values: { } }).then(function (m) {
+            messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                application : "unknown-app", entity : "namespace.Entity", values: { } 
+            }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
                 checkStatus(m, "Failure");
@@ -591,7 +631,10 @@ suite('EBUI', function() {
         });
         
         test('processPendingMessage - unknown entity', function(done) {
-            messageStore.saveMessage({ application : expensesApplicationId, entity : "namespace.Entity", values: { } }).then(function (m) {
+            messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                application : expensesApplicationId, entity : "namespace.Entity", values: { } 
+            }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
                 checkStatus(m, "Failure");
@@ -601,7 +644,11 @@ suite('EBUI', function() {
         });
 
         test('processPendingMessage - unknown instance', function(done) {
-            messageStore.saveMessage({ application : expensesApplicationId, entity : "expenses.Employee", objectId: "-1", values: { name: "Some Name" } }).then(function (m) {
+            messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
+                application : expensesApplicationId, entity : "expenses.Employee", 
+                objectId: "-1", values: { name: "Some Name" } 
+            }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function (m) {
                 checkStatus(m, "Failure");
@@ -613,9 +660,10 @@ suite('EBUI', function() {
 
         test('processPendingMessage - missing required field', function(done) {
             messageStore.saveMessage({ 
+                fromEmail: "foo@bar.com", fromName: "Foo Bar",
                 application : expensesApplicationId, 
                 entity : 'expenses.Employee', 
-                values: {} 
+                values: {}
             }).then(function (m) {
                 return messageProcessor.processPendingMessage(m);
             }).then(function(m) {
