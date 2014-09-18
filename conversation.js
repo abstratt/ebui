@@ -18,14 +18,52 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
     assert(messageStore, "messageStore missing");
     
     self.start = function() {
+        var entity;
+        var userEntity, emailProperty;
+        var userInstance;
         var message = contextMessage;
         message.status = 'Processing';
         message.error = {};
         return messageStore.saveMessage(message).then(function () {
+            if (!message.fromEmail) {
+                throw new Error("No sender email in message!");
+            }
             return kirra.getApplication();
         }).then(function (application) {
             return kirra.getEntity(message.entity);
-        }).then(function (entity) {
+        }).then(function (loadEntity) {
+            if (!loadEntity) {
+                throw new Error("No entity found: " + message.entity);
+            }
+            entity = loadEntity;
+        }).then(function () {
+            return kirra.getEntities();
+        }).then(function (entities) {
+            if (!entities) {
+                throw new Error("No entities found!");
+            }
+            return entities.find(function(e) { return e.user; });
+        }).then(function (found) {
+            userEntity = found;
+            if (!userEntity) {
+                throw new Error("Application has no user entity");
+            }
+            return self.findEmailProperty(userEntity);
+        }).then(function (property) {
+            if (!property) {
+                throw new Error(userEntity.label + " does not have an email property");
+            }
+            emailProperty = property;
+            var filter = {};
+            filter[emailProperty.name] = message.fromEmail;
+            return kirra.getInstances(userEntity.fullName, filter);
+        }).then(function (userInstances) {
+            if (userInstances.length === 0) {
+                return self.createUser(userEntity, message);
+            }
+            return q(userInstances.contents[0]);
+        }).then(function (userFoundOrCreated) {
+            userInstance = userFoundOrCreated;
             var deferred = q.defer();
             var promise = deferred.promise;
             // it is possible the entity was loosely named, force a precise entity name
@@ -159,6 +197,34 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
         message.invocationsCompleted = [];            
         return messageStore.saveMessage(message).then(invocationConsumer);
     };
+    
+    self.findEmailProperty = function(userEntity) {
+        return Object.keys(userEntity.properties).map(function(k) {
+            return userEntity.properties[k];
+        }).find(function (property) {
+            return property.unique && !property.editable && property.initializable;
+        });
+    };
+    
+    self.findNameProperty = function(userEntity) {
+        return Object.keys(userEntity.properties).map(function(k) {
+            return userEntity.properties[k];
+        }).find(function (property) {
+            return !property.unique && property.required && property.editable;
+        });
+    };
+    
+    self.createUser = function(userEntity, message) {
+        var emailProperty = self.findEmailProperty(userEntity);
+        var nameProperty = self.findNameProperty(userEntity);
+        var values = {};
+        values[emailProperty.name] = message.fromEmail;
+        if (nameProperty) {
+            values[nameProperty.name] = message.fromName;
+        }
+        return kirra.createInstance(userEntity.fullName, values, {});
+    };
+    
     
     self.processCreationMessage = function(message) {
         var createdInstance;

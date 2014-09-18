@@ -93,7 +93,7 @@ var Kirra = function (baseUrl, application, runAs) {
     
     self.getEntities = function() {
         if (self.cachedEntities) {
-            return q.thenResolve(self.cachedEntities);
+            return q(self.cachedEntities);
         }
         return self.performRequest('/entities/', undefined, 200).then(function (entities) {
             self.cachedEntities = entities;

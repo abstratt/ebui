@@ -264,6 +264,18 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
+        test('processPendingMessage - user creation', function(done) {
+            var email = "support-" + Math.random() + "@cloudfier.com";
+            var name = "Tech Support " + Math.random();            
+            var kirra = new Kirra(kirraApiUrl, todoApplicationId, email);
+            messageStore.saveMessage({ fromEmail: email, fromName: name, application : todoApplicationId, entity : 'todo.Todo', values: { description: "A description", details: "The details" } }).then(function (m) {
+                return messageProcessor.processPendingMessage(m);
+            }).then(function(m) {
+                checkStatus(m, "Created");
+                assert.ok(m.links.creator);                
+            }).then(done, done);
+        });
+        
         test('processPendingMessage - comment as value', function(done) {
             messageStore.saveMessage({ 
                 application : todoApplicationId, 
