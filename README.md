@@ -10,6 +10,9 @@ You can try EBUI against a Cloudfier example application named [Ship-it!](https:
 
 #### Creating an issue
 
+>Note: At this time, your email and name will be collected by the application and be available
+>as application data to any user accessing the application.
+
 Send an email like this:
 
 To: issue.demo-cloudfier-examples-shipit-plus@inbox.cloudfier.com
@@ -180,7 +183,6 @@ Properties can be set on creation or update using the following syntax in the bo
     Thanks for your report. I was able to reproduce it locally, and agree it is a 
     dangerous bug. We will fix it right away.
 
-Note the 
 
 #### Invoking actions
 
@@ -201,6 +203,10 @@ or (for passing a single argument):
 
 which would send the "Reject" message with the shown message as an argument for the 'reason' parameter. 
 
+
+#### User creation
+
+An application user is created for the sender of the message if no existing user instance is found (if a user entity was not defined in the application, it results in an error). All actions are performed as that user. Note that all user data is available in the application with no access controls, so beware who you share your app with.
 
 #### A note on sender authentication
 
