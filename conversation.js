@@ -163,7 +163,7 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
     };
     
     self.makeEmailForQuery = function(message) {
-        return message.entity.replace('.', '_') + '-' + message.query + '.' + message.application + '@inbox.cloudfier.com';
+        return message.entity.replace('.', '_') + '-report'+ '.' + message.application + '@inbox.cloudfier.com';
     };
     
     self.invokePendingActions = function(message) {
