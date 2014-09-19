@@ -206,7 +206,7 @@ which would send the "Reject" message with the shown message as an argument for 
 
 #### User creation
 
-An application user is created for the sender of the message if no existing user instance is found (if a user entity does not exist, it results in an error). All actions are performed as that user. Note that all user data is available in the application with not access controls, so beware who you share your app with.
+An application user is created for the sender of the message if no existing user instance is found (if a user entity does not exist, it results in an error). All actions are performed as that user. Note that all user data is available in the application with no access controls, so beware who you share your app with.
 
 #### A note on sender authentication
 
