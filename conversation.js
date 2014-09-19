@@ -162,6 +162,10 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
         return message.entity.replace('.', '_') + '-' + message.objectId + '.' + message.application + '@inbox.cloudfier.com';
     };
     
+    self.makeEmailForQuery = function(message) {
+        return message.entity.replace('.', '_') + '-' + message.query + '.' + message.application + '@inbox.cloudfier.com';
+    };
+    
     self.invokePendingActions = function(message) {
         var invocationConsumer;
         var invocationsAttempted = message.invocations.slice(0);        
@@ -276,7 +280,7 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
             });
             var dataString = userFriendlyData.join("\n\n--------------------------\n\n");
             var body = "Record(s) found: " + found.length + "\n\n--------------------------\n\n" + dataString;
-            self.replyToSender(message, body, self.makeEmailForInstance(message), subject);
+            self.replyToSender(message, body, self.makeEmailForQuery(message), subject);
             message.status = "Processed";
             return messageStore.saveMessage(message);
         }, self.onError(message, "Error processing your message, query could not be performed."));
