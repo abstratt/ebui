@@ -402,10 +402,10 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
 	            return kirra.getInstanceTemplate(commentTargetEntityName).then(function (template) {
 	                var mergedValues = merge(merge({}, values), template.values);
         		    var mergedLinks = merge(merge({}, links), template.links);
-                    return kirra.createInstance(commentTargetEntityName, mergedValues, mergedLinks);
+                    return kirra.createInstance(commentTargetEntityName, mergedValues, mergedLinks).then(q(parentInstance));
                 });    
 	        }
-            return parentInstance;
+            return q(parentInstance);
 	    });
     };
     
