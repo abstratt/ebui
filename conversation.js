@@ -158,14 +158,6 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
     };
 
     
-    self.makeEmailForInstance = function(message) {
-        return message.entity.replace('.', '_') + '-' + message.objectId + '.' + message.application + '@inbox.cloudfier.com';
-    };
-    
-    self.makeEmailForQuery = function(message) {
-        return message.entity.replace('.', '_') + '-report'+ '.' + message.application + '@inbox.cloudfier.com';
-    };
-    
     self.invokePendingActions = function(message) {
         var invocationConsumer;
         var invocationsAttempted = message.invocations.slice(0);        
@@ -276,7 +268,9 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
         }).then(function (found) {
             var subject = query.label;
             var userFriendlyData = found.contents.map(function(it) {
-                return self.printUserFriendlyInstance(entity, it) + "\n\n" + "Use this link to view it:\n\n" + self.makeLinkForInstance(message, it);
+                return self.printUserFriendlyInstance(entity, it) + 
+                    "\n\n" + "Use this link to view it:\n\n" + self.makeLinkForInstance(message, it) +
+                    "\n\n" + "and this email to update it:\n\n" + self.makeEmailForInstance(message, it);
             });
             var dataString = userFriendlyData.join("\n\n--------------------------\n\n");
             var body = "Record(s) found: " + found.length + "\n\n--------------------------\n\n" + dataString;
@@ -284,6 +278,15 @@ var Conversation = function (contextMessage, messageStore, emailGateway, kirra) 
             message.status = "Processed";
             return messageStore.saveMessage(message);
         }, self.onError(message, "Error processing your message, query could not be performed."));
+    };
+    
+        
+    self.makeEmailForInstance = function(message, instance) {
+        return message.entity.replace('.', '_') + '-' + (instance || message).objectId + '.' + message.application + '@inbox.cloudfier.com';
+    };
+    
+    self.makeEmailForQuery = function(message) {
+        return message.entity.replace('.', '_') + '-report'+ '.' + message.application + '@inbox.cloudfier.com';
     };
     
     self.makeLinkForInstance = function(message, instance) {
