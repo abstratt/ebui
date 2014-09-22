@@ -286,7 +286,7 @@ suite('EBUI', function() {
             }).then(done, done);
         });
         
-        test('processPendingMessage - comment as value', function(done) {
+        test('processPendingMessage - comment as value - todo application', function(done) {
             messageStore.saveMessage({ 
                 fromEmail: "foo@bar.com", fromName: "Foo Bar",
                 application : todoApplicationId, 
@@ -311,7 +311,7 @@ suite('EBUI', function() {
                 return kirra.getRelatedInstances(updateMessage.entity, updateMessage.objectId, "comments");
             }).then(function(instances) {
                 assert.equal(instances.length, 1);
-                assert.equal(instances.contents[0].values['comment'], 'This is just a pointless comment'); 
+                assert.equal(instances.contents[0].values['text'], 'This is just a pointless comment'); 
             }).then(done, done);
         });
         
