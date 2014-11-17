@@ -212,4 +212,4 @@ An application user is created for the sender of the message if no existing user
 
 *From:* addresses can be easily spoofed. There is no mechanism in EBUI yet for safely authenticating senders, hence it should not be used as-is to perform operations that would require any sort of privilege (applications should consider EBUI-originated commands to be from unauthenticated users). Implementation of a proper authentication mechanism is required for any applications where spoofing would not be tolerable and is currently left as an exercise to the reader.
 
-![Built on DEV@Cloud](http://cloudbees.prod.acquia-sites.com/sites/default/files/styles/large/public/Button-Built-on-CB-1.png)
+![Built on DEV@Cloud](https://www.cloudbees.com/sites/default/files/styles/large/public/Button-Built-on-CB-1.png)
