@@ -2,10 +2,9 @@ var http = require("http");
 var url = require("url");
 var q = require('q');
 require('array.prototype.find');
-var ebuiUtil = require("./util.js");
-
-var assert = ebuiUtil.assert;
-var merge = ebuiUtil.merge;
+var helpers = require("./helpers.js");
+var assert = helpers.assert;
+var merge = helpers.merge;
 var util = require('util');
 
 var Kirra = function (baseUrl, application, runAs) {
