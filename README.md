@@ -6,7 +6,9 @@ EBUI is an Email-Based User Interface for business applications. It acts as a tr
 
 ### Try it!
 
-You can try EBUI against a Cloudfier example application named [Ship-it!](https://bitbucket.org/abstratt/cloudfier-examples/src/master/shipit/?at=master), a simple issue tracking application.
+~~You can try EBUI against a Cloudfier example application named [Ship-it!](https://bitbucket.org/abstratt/cloudfier-examples/src/master/shipit/?at=master), a simple issue tracking application.~~
+
+The EBUI test instance is no longer running.
 
 #### Creating an issue
 
@@ -141,7 +143,7 @@ This is still an experiment. What is working:
 - can invoke actions with or without arguments
 - can refer (link) to instances of related entities using their shorthand
 
-Interested? Culd you see yourself using this? Please join by contributing code, bugs, feature requests etc.
+Interested? Can you see yourself using this? Please join by contributing code, bugs, feature requests etc.
 
 ### How does it work?
 
